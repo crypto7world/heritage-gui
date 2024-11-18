@@ -5,11 +5,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "#a61d1d",
-        secondary: "#09b4ba",
+        primary: "rgb(var(--color-primary))",
+        secondary: "rgb(var(--color-secondary))",
+        front: "rgb(var(--color-text))",
+        back: "rgb(var(--color-background))",
       },
     },
   },
+  darkMode: "selector",
   plugins: [],
   safelist: [
     {

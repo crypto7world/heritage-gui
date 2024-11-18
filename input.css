@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  #app {
+    --color-primary: 166 29 29;
+    --color-secondary: 9 180 186;
+    --color-text: 0 0 0;
+    --color-background: 255 255 255;
+  }
+
+  #app[class~="dark"] {
+    --color-primary: 227 63 53;
+    --color-secondary: 74 182 183;
+    --color-text: 255 255 255;
+    --color-background: 33 33 33;
+  }
+}
