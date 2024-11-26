@@ -1,6 +1,5 @@
-use std::{path::PathBuf, str::FromStr, sync::OnceLock};
-
 use btc_heritage_wallet::bitcoin::Network;
+use std::{path::PathBuf, str::FromStr, sync::OnceLock};
 
 pub fn config() -> &'static Configuration {
     static CONFIGURATION: OnceLock<Configuration> = OnceLock::new();
@@ -17,14 +16,12 @@ pub fn config() -> &'static Configuration {
                 home_path
             }
         };
-
         let service_api_url = std::env::var("HERITAGE_SERVICE_API_URL")
             .unwrap_or("https://api.btcherit.com/v1".to_owned());
         let auth_url = std::env::var("HERITAGE_AUTH_URL")
             .unwrap_or("https://device.crypto7.world/token".to_owned());
         let auth_client_id = std::env::var("HERITAGE_AUTH_CLIENT_ID")
             .unwrap_or("cda6031ca00d09d66c2b632448eb8fef".to_owned());
-
         let configuration = Configuration {
             network,
             datadir,

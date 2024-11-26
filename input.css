@@ -16,4 +16,8 @@
     --color-text: 255 255 255;
     --color-background: 33 33 33;
   }
+
+  :root:has(div#app[class~="no-doc-scroll"]) {
+    overflow: hidden;
+  }
 }

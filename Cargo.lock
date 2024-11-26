@@ -503,7 +503,6 @@ dependencies = [
 [[package]]
 name = "btc-heritage"
 version = "0.20.2"
-source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.20.2#42819ed5b76ee57768b199177e149068a08b9267"
 dependencies = [
  "bdk",
  "log",
@@ -516,7 +515,6 @@ dependencies = [
 [[package]]
 name = "btc-heritage-wallet"
 version = "0.20.2"
-source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.20.2#42819ed5b76ee57768b199177e149068a08b9267"
 dependencies = [
  "bip39",
  "bitcoin 0.31.2",
@@ -1134,6 +1132,15 @@ dependencies = [
  "urlencoding",
  "webbrowser",
  "wry",
+]
+
+[[package]]
+name = "dioxus-free-icons"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfbba8b2089b185e4cebc394fb36353c7269a3230b542d97d3d192ccd864d48b"
+dependencies = [
+ "dioxus",
 ]
 
 [[package]]
@@ -2146,17 +2153,18 @@ version = "0.1.0-alpha"
 dependencies = [
  "btc-heritage-wallet",
  "dioxus",
+ "dioxus-free-icons",
  "dirs-next",
  "env_logger",
  "log",
  "open",
  "serde",
+ "tokio",
 ]
 
 [[package]]
 name = "heritage-service-api-client"
 version = "0.20.2"
-source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.20.2#42819ed5b76ee57768b199177e149068a08b9267"
 dependencies = [
  "btc-heritage",
  "log",
@@ -2165,6 +2173,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
@@ -3723,7 +3732,6 @@ checksum = "a77c62af46e79de0a562e1a9849205ffcb7fc1238876e9bd743357570e04046f"
 dependencies = [
  "base64 0.22.1",
  "bytes",
- "futures-channel",
  "futures-core",
  "futures-util",
  "http 1.1.0",

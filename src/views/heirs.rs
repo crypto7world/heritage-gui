@@ -1,9 +1,8 @@
 use btc_heritage_wallet::{DatabaseItem, Heir};
 use dioxus::prelude::*;
 
-use crate::clients::database;
-
 use super::TitledView;
+use crate::{clients::database, utils::log_error};
 
 #[component]
 pub fn HeirListView() -> Element {
@@ -15,14 +14,16 @@ pub fn HeirListView() -> Element {
         }
     }
 }
+
 #[component]
 fn HeirList() -> Element {
-    let heir_names = Heir::list_names(&database()).unwrap_or_default();
-
+    let heir_names = Heir::list_names(&database())
+        .map_err(log_error)
+        .unwrap_or_default();
     rsx! {
         ul {
             for heir_name in heir_names {
-                li { {heir_name} }
+                li { { heir_name } }
             }
         }
     }

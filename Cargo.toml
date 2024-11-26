@@ -11,10 +11,13 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-btc-heritage-wallet = { git = "https://github.com/crypto7world/btc-heritage.git", tag = "v0.20.2" }
+btc-heritage-wallet = { path = "../btc-heritage/crates/btc-heritage-wallet" }
+# btc-heritage-wallet = { git = "https://github.com/crypto7world/btc-heritage.git", tag = "v0.20.2" }
 open = "5.2.0"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
 dioxus = { version = "0.5", features = ["router", "desktop"] }
+dioxus-free-icons = { version = "0.8" }
+tokio = { version = "1" }
 log = "0.4"
 env_logger = "0.11"
 

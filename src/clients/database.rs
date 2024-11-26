@@ -1,6 +1,5 @@
-use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
-
 use btc_heritage_wallet::Database;
+use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 fn database_rwlock() -> &'static RwLock<Database> {
     static DATABASE: OnceLock<RwLock<Database>> = OnceLock::new();
