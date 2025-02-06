@@ -12,11 +12,10 @@ pub fn Modal(
     });
 
     if *is_open.read() {
-        scroll_blocking.write().block();
+        use_effect(move || scroll_blocking.write().block());
     } else {
-        scroll_blocking.write().unblock();
+        use_effect(move || scroll_blocking.write().unblock());
     }
-
     rsx! {
         if *is_open.read() {
             div {
@@ -35,7 +34,7 @@ pub fn Modal(
                     }
                 },
                 div { class: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-fit max-h-[90vh] max-w-[90vw] bg-base-100 z-50 rounded-lg overflow-hidden",
-                    { children }
+                    {children}
                 }
             }
         }

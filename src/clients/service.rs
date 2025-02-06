@@ -89,28 +89,34 @@ pub fn disconnect() -> Result<(), String> {
 
 pub fn service_client() -> HeritageServiceClient {
     log::debug!("service_client()");
+
     SERVICE_CLIENT
         .get_or_init(|| {
             let config = config();
-            let mut db = database_mut();
+            let db = database();
             let tokens = Tokens::load(db.deref())
                 .expect("database error")
-                .map(|mut t| match t.refresh_if_needed() {
-                    Ok(true) => {
-                        log::info!("Refreshing tokens in DB");
-                        t.save(db.deref_mut())
-                            .map_err(|e| {
-                                log::warn!("Failed to write tokens in DB: {e}");
-                                e
-                            })
-                            .ok();
-                        t
+                .map(|mut t| {
+                    if t.need_refresh() {
+                        match t.refresh() {
+                            Ok(_) => {
+                                // Drop the read-lock in order to acquire the write-lock
+                                drop(db);
+                                log::info!("Refreshing tokens in DB");
+                                t.save(database_mut().deref_mut())
+                                    .map_err(|e| {
+                                        log::warn!("Failed to write tokens in DB: {e}");
+                                        e
+                                    })
+                                    .ok();
+                            }
+
+                            Err(e) => {
+                                log::warn!("Failed to refresh tokens: {e}");
+                            }
+                        }
                     }
-                    Ok(false) => t,
-                    Err(e) => {
-                        log::warn!("Failed to refresh tokens: {e}");
-                        t
-                    }
+                    t
                 });
 
             HeritageServiceClient::new(

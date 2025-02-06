@@ -5,24 +5,26 @@ use dioxus::{
 };
 
 use crate::{
+    clients::get_userid,
     components::{Footer, NavBar},
-    views::{heirs::HeirListView, inheritances::InheritanceListView, wallets::WalletListView},
+    views::{
+        heir_list::HeirListView, inheritances::InheritanceListView, wallet::WalletView,
+        wallet_list::WalletListView,
+    },
 };
+
+static TITLE: &'static str = "Heritage Wallet";
 
 pub fn launch_gui() {
     log::info!("starting app");
     LaunchBuilder::desktop()
         .with_cfg(
-            Config::new()
-                .with_window(
-                    WindowBuilder::new()
-                        .with_title("Heritage Wallet")
-                        .with_inner_size(LogicalSize::new(1920, 1080))
-                        .with_resizable(true),
-                )
-                .with_custom_head(
-                    r#"<link rel="stylesheet" href="assets/tailwind.css">"#.to_string(),
-                ),
+            Config::new().with_window(
+                WindowBuilder::new()
+                    .with_title(TITLE)
+                    .with_inner_size(LogicalSize::new(1920, 1080))
+                    .with_resizable(true),
+            ),
         )
         .launch(App)
 }
@@ -36,6 +38,8 @@ pub enum Route {
         #[nest("/wallets")]
             #[route("/")]
             WalletListView {},
+            #[route("/:wallet_name")]
+            WalletView { wallet_name: String },
         #[end_nest]
         #[nest("/heirs")]
             #[route("/")]
@@ -75,25 +79,34 @@ impl ScrollBlocking {
 }
 
 fn App() -> Element {
+    log::debug!("App reload");
+
     use_context_provider(|| Signal::new(DarkMode(true)));
     use_context_provider(|| Signal::new(ScrollBlocking(false)));
+    use_context_provider(|| Signal::<_, SyncStorage>::new_maybe_sync(get_userid()));
     let dark_mode = use_context::<Signal<DarkMode>>();
-    let data_theme = if dark_mode().0 { "dark" } else { "light" };
     let scroll_blocking = use_context::<Signal<ScrollBlocking>>();
-    let block_scrolling = if scroll_blocking().0 {
-        Some("no-doc-scroll")
-    } else {
-        None
-    };
+
     rsx! {
-        div { id: "app", "data-theme": "{data_theme}", class: block_scrolling, Router::<Route> {} }
+        document::Title { "{TITLE}" }
+        document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
+        document::Stylesheet { href: asset!("/assets/tailwind.css") }
+
+        div {
+            id: "app",
+            class: if scroll_blocking().0 { "no-doc-scroll" },
+            class: if dark_mode().0 { "dark" },
+            Router::<Route> {}
+        }
     }
 }
 
 #[component]
 fn MainView() -> Element {
+    log::debug!("MainView reload");
+
     rsx! {
-        div { class: "flex flex-col relative min-h-dvh",
+        div { class: "relative min-h-dvh",
             header { class: "bg-base-100 fixed top-0 w-full z-10 shadow-lg shadow-base-content/10",
                 NavBar {}
             }

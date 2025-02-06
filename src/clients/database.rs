@@ -5,6 +5,7 @@ fn database_rwlock() -> &'static RwLock<Database> {
     static DATABASE: OnceLock<RwLock<Database>> = OnceLock::new();
     DATABASE.get_or_init(|| {
         let config = crate::clients::config();
+        log::info!("Loading Database");
         RwLock::new(
             Database::new(&config.datadir, config.network).expect("Could not open the database"),
         )

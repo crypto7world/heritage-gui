@@ -1,15 +1,17 @@
 use dioxus::prelude::*;
 
 use crate::{
-    clients::{connect, disconnect, get_userid, is_connected, UserId},
+    clients::{connect, disconnect, is_connected, UserId},
     components::Modal,
 };
 
 #[component]
 pub fn ServiceConnector() -> Element {
-    let mut user_id: Signal<Option<UserId>, SyncStorage> = use_signal_sync(|| get_userid());
+    log::debug!("ServiceConnector reload");
 
-    let mut connected = use_signal(|| false);
+    let mut user_id = use_context::<Signal<Option<UserId>, SyncStorage>>();
+
+    let mut connected = use_signal(|| user_id.read().is_some());
     use_future(move || async move {
         *connected.write() = tokio::task::spawn_blocking(|| is_connected())
             .await
@@ -61,9 +63,9 @@ pub fn ServiceConnector() -> Element {
     };
 
     let (color, text) = if *connected.read() {
-        ("bg-green-700", "Connected")
+        ("bg-success", "Connected")
     } else {
-        ("bg-red-700", "Disconnected")
+        ("bg-error", "Disconnected")
     };
 
     rsx! {
@@ -75,8 +77,8 @@ pub fn ServiceConnector() -> Element {
                     class: "h-full px-2 content-center flex flex-row hover:cursor-pointer",
                     span { class: "h-6 w-6 my-auto inline-block rounded-full {color}" }
                     div { class: "w-28 ml-2 my-auto",
-                        div { class: "font-thin text-xs", "Service Status:" }
-                        div { "{text}" }
+                        div { class: "font-light text-xs", "Service Status:" }
+                        div { {text} }
                     }
                 }
                 ul {
@@ -85,10 +87,10 @@ pub fn ServiceConnector() -> Element {
                     if *connected.read() {
                         li { class: "text-sm font-thin", "Connected as:" }
                         li { class: "text-3xl font-black text-center",
-                            {user_id.read().as_ref().map(|uid|uid.preferred_username.as_ref())}
+                            {user_id.read().as_ref().map(|uid| uid.preferred_username.as_ref())}
                         }
                         li { class: "text-sm font-medium text-center",
-                            {user_id.read().as_ref().map(|uid|uid.email.as_ref())}
+                            {user_id.read().as_ref().map(|uid| uid.email.as_ref())}
                         }
                         div { class: "my-2 h-px border-t border-solid border-gray-500" }
                         li {
@@ -117,16 +119,12 @@ pub fn ServiceConnector() -> Element {
 
                     p { class: "pt-4", "Please browse to the Heritage service website:" }
                     div { class: "text-xl text-secondary font-bold select-all",
-                        {dar_content
-                            .read()
-                            .as_ref().map(|v|v.0.as_str()).unwrap_or_default()}
+                        {dar_content.read().as_ref().map(|v| v.0.as_str()).unwrap_or_default()}
                     }
                     p { "in order to approve the connection (should have been open in your browser)" }
                     p { class: "py-4", "Verify that the code displayed is:" }
                     div { class: "p-2 mb-4 size-fit mx-auto text-6xl text-primary font-black rounded border-solid border-2 border-base-content",
-                        {dar_content
-                            .read()
-                            .as_ref().map(|v|v.1.as_str()).unwrap_or_default()}
+                        {dar_content.read().as_ref().map(|v| v.1.as_str()).unwrap_or_default()}
                     }
                 }
             }
