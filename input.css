@@ -1,9 +1,28 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root:has(div#app[class~="no-doc-scroll"]) {
-    overflow: hidden;
+@import "tailwindcss";
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  --color-primary: #a61d1d;
+  --color-secondary: #09b4ba;
+}
+@plugin "daisyui/theme" {
+  name: "dark";
+  prefersdark: true;
+  --color-primary: #e33f35;
+  --color-secondary: #4ab6b7;
+}
+@theme {
+  --animate-scalebump: scalebump 0.1s;
+  @keyframes scalebump {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 }

@@ -20,3 +20,6 @@ target/
 /.direnv
 /.envrc
 /.vscode
+
+# Node modules & co are just for the IDE
+/node_modules

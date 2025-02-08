@@ -54,50 +54,19 @@ pub enum Route {
     PageNotFound { route: Vec<String> },
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct DarkMode(bool);
-
-impl DarkMode {
-    pub fn get(&self) -> bool {
-        self.0
-    }
-    pub fn set(&mut self, v: bool) {
-        self.0 = v;
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ScrollBlocking(bool);
-
-impl ScrollBlocking {
-    pub fn block(&mut self) {
-        self.0 = true;
-    }
-    pub fn unblock(&mut self) {
-        self.0 = false;
-    }
-}
+pub(crate) static DARK_MODE: GlobalSignal<bool> = Global::new(|| true);
 
 fn App() -> Element {
     log::debug!("App reload");
 
-    use_context_provider(|| Signal::new(DarkMode(true)));
-    use_context_provider(|| Signal::new(ScrollBlocking(false)));
     use_context_provider(|| Signal::<_, SyncStorage>::new_maybe_sync(get_userid()));
-    let dark_mode = use_context::<Signal<DarkMode>>();
-    let scroll_blocking = use_context::<Signal<ScrollBlocking>>();
 
     rsx! {
         document::Title { "{TITLE}" }
         document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
 
-        div {
-            id: "app",
-            class: if scroll_blocking().0 { "no-doc-scroll" },
-            class: if dark_mode().0 { "dark" },
-            Router::<Route> {}
-        }
+        div { id: "app", class: if DARK_MODE() { "dark" }, Router::<Route> {} }
     }
 }
 

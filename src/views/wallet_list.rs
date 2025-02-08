@@ -38,8 +38,11 @@ fn WalletList() -> Element {
                 WalletItem { key: "{wallet_name}", wallet_name }
             }
             for i in 0..30 {
-
-                div { class: "card card-compact aspect-square border", "Pouet {i}" }
+                div {
+                    key: "{i}",
+                    class: "card card-compact aspect-square border p-6",
+                    "Pouet {i}"
+                }
             }
         }
     }
@@ -149,7 +152,7 @@ fn WalletItem(wallet_name: String) -> Element {
 
     rsx! {
         div {
-            class: "card card-compact aspect-square border",
+            class: "card card-compact aspect-square border shadow-xl",
             onclick: move |_| {
                 navigator
                     .push(Route::WalletView {
@@ -182,8 +185,12 @@ fn WalletItem(wallet_name: String) -> Element {
 
                 div { class: "grow" }
                 div { class: "mx-auto flex flex-row gap-6",
-                    div { class: "badge {key_provider_badge_color}", {key_provider_badge_value} }
-                    div { class: "badge {online_wallet_badge_color}", {online_wallet_badge_value} }
+                    div { class: "badge shadow-md {key_provider_badge_color}",
+                        {key_provider_badge_value}
+                    }
+                    div { class: "badge shadow-md {online_wallet_badge_color}",
+                        {online_wallet_badge_value}
+                    }
                 }
             }
         }

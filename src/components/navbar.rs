@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::service_connector::ServiceConnector,
-    gui::{DarkMode, Route},
+    gui::{Route, DARK_MODE},
 };
 
 #[component]
@@ -54,14 +54,12 @@ fn NavLink(route: Route, children: Element) -> Element {
 
 #[component]
 pub fn DarkModeToggle() -> Element {
-    let mut dark_mode = use_context::<Signal<DarkMode>>();
-
     rsx! {
         input {
             r#type: "checkbox",
             name: "theme",
             class: "theme-controller hidden",
-            value: if dark_mode.read().get() { "dark" } else { "light" },
+            value: if DARK_MODE() { "dark" } else { "light" },
             tabindex: "-1",
             checked: true,
         }
@@ -70,8 +68,8 @@ pub fn DarkModeToggle() -> Element {
                 r#type: "checkbox",
                 name: "theme",
                 tabindex: "-1",
-                oninput: move |event| dark_mode.write().set(event.checked()),
-                checked: dark_mode.read().get(),
+                oninput: move |event| *DARK_MODE.write() = event.checked(),
+                checked: DARK_MODE(),
             }
             svg {
                 class: "swap-off h-10 w-10 fill-current",
