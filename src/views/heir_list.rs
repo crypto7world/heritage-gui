@@ -1,11 +1,13 @@
-use btc_heritage_wallet::{DatabaseItem, Heir};
 use dioxus::prelude::*;
 
 use super::TitledView;
-use crate::{clients::database, utils::log_error};
+use crate::hook_helpers;
 
 #[component]
 pub fn HeirListView() -> Element {
+    log::debug!("HeirListView Rendered");
+
+    use_drop(|| log::debug!("HeirListView Dropped"));
     rsx! {
         TitledView {
             title: "Heirs",
@@ -17,13 +19,17 @@ pub fn HeirListView() -> Element {
 
 #[component]
 fn HeirList() -> Element {
-    let heir_names = Heir::list_names(&database())
-        .map_err(log_error)
-        .unwrap_or_default();
+    log::debug!("HeirList Rendered");
+
+    let heir_names = hook_helpers::use_resource_heir_names();
+
+    use_drop(|| log::debug!("HeirList Dropped"));
     rsx! {
         ul {
-            for heir_name in heir_names {
-                li { { heir_name } }
+            if let Some(ref heir_names) = *heir_names.read() {
+                for heir_name in heir_names {
+                    li { key: "{heir_name}", "{heir_name}" }
+                }
             }
         }
     }

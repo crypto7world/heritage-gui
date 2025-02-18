@@ -1,9 +1,6 @@
-use std::error::Error;
-
 use btc_heritage_wallet::bitcoin::{Amount, Denomination};
-use chrono::DateTime;
 
-pub fn log_error<E: Error>(error: E) -> String {
+pub fn log_error<E: core::fmt::Display>(error: E) -> String {
     log::error!("{error}");
     error.to_string()
 }
@@ -19,7 +16,13 @@ pub fn amount_to_string(amount: Amount) -> String {
 }
 
 pub fn timestamp_to_string(ts: u64) -> String {
-    DateTime::from_timestamp(ts as i64, 0)
+    chrono::DateTime::from_timestamp(ts as i64, 0)
         .expect("invalid timestamp")
         .to_string()
+}
+
+pub async fn wait_resource<T: 'static>(resource: dioxus::hooks::Resource<T>) {
+    while !resource.finished() {
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    }
 }

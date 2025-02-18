@@ -1,72 +1,46 @@
+use btc_heritage_wallet::heritage_service_api_client::DeviceAuthorizationResponse;
 use dioxus::prelude::*;
 
-use crate::{
-    clients::{connect, disconnect, is_connected, UserId},
-    components::Modal,
-};
+use crate::{components::Modal, state_management::CONNECTED_USER};
 
 #[component]
 pub fn ServiceConnector() -> Element {
     log::debug!("ServiceConnector reload");
 
-    let mut user_id = use_context::<Signal<Option<UserId>, SyncStorage>>();
+    let connected = use_memo(|| CONNECTED_USER.read().is_some());
 
-    let mut connected = use_signal(|| user_id.read().is_some());
-    use_future(move || async move {
-        *connected.write() = tokio::task::spawn_blocking(|| is_connected())
-            .await
-            .unwrap();
-    });
-
-    let mut dar_content: Signal<Option<(String, String)>, SyncStorage> = use_signal_sync(|| None);
-
+    let mut dar_content: Signal<Option<(String, String)>> = use_signal(|| None);
     let mut connecting = use_signal(|| false);
     use_effect(move || *connecting.write() = dar_content.read().is_some());
 
-    let connect = move |_| {
+    let connect_handler = move |_| async move {
+        let (tx, rx) = tokio::sync::oneshot::channel();
         spawn(async move {
-            *connected.write() = tokio::task::spawn_blocking(move || {
-                match connect(|dar| {
-                    let verification_uri_complete =
-                        format!("{}?user_code={}", dar.verification_uri, dar.user_code);
-                    let human_formated_code =
-                        format!("{}-{}", &dar.user_code[..4], &dar.user_code[4..]);
+            let dar: DeviceAuthorizationResponse = rx.await.expect("chanel rx closed");
+            let verification_uri_complete =
+                format!("{}?user_code={}", dar.verification_uri, dar.user_code);
+            let human_formated_code = format!("{}-{}", &dar.user_code[..4], &dar.user_code[4..]);
 
-                    _ = open::that(&verification_uri_complete);
+            _ = open::that_in_background(&verification_uri_complete);
 
-                    *dar_content.write() = Some((verification_uri_complete, human_formated_code));
-                    Ok(())
-                }) {
-                    Ok(uid) => {
-                        user_id.write().replace(uid);
-                    }
-                    Err(e) => {
-                        log::error!("{e}");
-                    }
-                };
-                is_connected()
-            })
-            .await
-            .unwrap();
-            *dar_content.write() = None;
+            *dar_content.write() = Some((verification_uri_complete, human_formated_code));
         });
-    };
-    let disconnect = move |_| {
-        spawn(async move {
-            tokio::task::spawn_blocking(|| disconnect())
-                .await
-                .unwrap()
-                .unwrap();
-            *connected.write() = false;
-            user_id.write().take();
-        });
+        crate::state_management::connect(move |dar| async move {
+            tx.send(dar).expect("chanel tx closed");
+            Ok(())
+        })
+        .await
+        .ok();
+        *dar_content.write() = None;
     };
 
-    let (color, text) = if *connected.read() {
+    let (color, text) = if connected() {
         ("bg-success", "Connected")
     } else {
         ("bg-error", "Disconnected")
     };
+
+    use_drop(|| log::debug!("ServiceConnector Dropped"));
 
     rsx! {
         div {
@@ -74,7 +48,7 @@ pub fn ServiceConnector() -> Element {
                 div {
                     tabindex: "0",
                     role: "button",
-                    class: "h-full px-2 content-center flex flex-row hover:cursor-pointer",
+                    class: "h-full px-2 content-center flex flex-row cursor-pointer",
                     span { class: "h-6 w-6 my-auto inline-block rounded-full {color}" }
                     div { class: "w-28 ml-2 my-auto",
                         div { class: "font-light text-xs", "Service Status:" }
@@ -84,19 +58,21 @@ pub fn ServiceConnector() -> Element {
                 ul {
                     tabindex: "0",
                     class: "menu dropdown-content bg-base-100 z-[1] min-w-52 rounded-b-xl p-4 shadow-lg shadow-base-content/10",
-                    if *connected.read() {
+                    if connected() {
                         li { class: "text-sm font-thin", "Connected as:" }
                         li { class: "text-3xl font-black text-center",
-                            {user_id.read().as_ref().map(|uid| uid.preferred_username.as_ref())}
+                            {CONNECTED_USER.read().as_ref().map(|uid| uid.preferred_username.as_ref())}
                         }
                         li { class: "text-sm font-medium text-center",
-                            {user_id.read().as_ref().map(|uid| uid.email.as_ref())}
+                            {CONNECTED_USER.read().as_ref().map(|uid| uid.email.as_ref())}
                         }
                         div { class: "my-2 h-px border-t border-solid border-gray-500" }
                         li {
                             button {
                                 class: "btn btn-ghost hover:bg-primary/10 uppercase",
-                                onclick: disconnect,
+                                onclick: |_| async {
+                                    crate::state_management::disconnect().await.ok();
+                                },
                                 "Disconnect"
                             }
                         }
@@ -104,7 +80,7 @@ pub fn ServiceConnector() -> Element {
                         li {
                             button {
                                 class: "btn btn-ghost hover:bg-primary/10 uppercase",
-                                onclick: connect,
+                                onclick: connect_handler,
                                 "Connect"
                             }
                         }

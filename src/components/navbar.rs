@@ -11,6 +11,8 @@ pub fn NavBar() -> Element {
 
     let navigator = use_navigator();
 
+    use_drop(|| log::debug!("NavBar Dropped"));
+
     rsx! {
         nav { class: "h-12 px-2 flex flex-row gap-2",
             div {

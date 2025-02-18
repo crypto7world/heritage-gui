@@ -5,7 +5,6 @@ use dioxus::{
 };
 
 use crate::{
-    clients::get_userid,
     components::{Footer, NavBar},
     views::{
         heir_list::HeirListView, inheritances::InheritanceListView, wallet::WalletView,
@@ -17,6 +16,7 @@ static TITLE: &'static str = "Heritage Wallet";
 
 pub fn launch_gui() {
     log::info!("starting app");
+
     LaunchBuilder::desktop()
         .with_cfg(
             Config::new().with_window(
@@ -54,12 +54,14 @@ pub enum Route {
     PageNotFound { route: Vec<String> },
 }
 
-pub(crate) static DARK_MODE: GlobalSignal<bool> = Global::new(|| true);
+pub static DARK_MODE: GlobalSignal<bool> = Signal::global(|| true);
 
 fn App() -> Element {
     log::debug!("App reload");
 
-    use_context_provider(|| Signal::<_, SyncStorage>::new_maybe_sync(get_userid()));
+    crate::state_management::init_services();
+
+    use_drop(|| log::debug!("App Dropped"));
 
     rsx! {
         document::Title { "{TITLE}" }
@@ -73,6 +75,8 @@ fn App() -> Element {
 #[component]
 fn MainView() -> Element {
     log::debug!("MainView reload");
+
+    use_drop(|| log::debug!("MainView Dropped"));
 
     rsx! {
         div { class: "relative min-h-dvh",

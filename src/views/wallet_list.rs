@@ -1,17 +1,12 @@
-use std::ops::Deref;
-
 use dioxus::prelude::*;
 
 use super::TitledView;
 use crate::{
-    clients::{database, database_mut, service_client, UserId},
+    components::wallet::{KeyProviderBadge, OnlineWalletBadge},
     gui::Route,
-    utils::{amount_to_string, log_error, timestamp_to_string},
+    hook_helpers,
 };
-use btc_heritage_wallet::{
-    bitcoin::Amount, online_wallet::WalletStatus, AnyKeyProvider, AnyOnlineWallet,
-    BoundFingerprint, DatabaseItem, OnlineWallet, Wallet,
-};
+use btc_heritage_wallet::online_wallet::WalletStatus;
 
 #[component]
 pub fn WalletListView() -> Element {
@@ -26,22 +21,30 @@ pub fn WalletListView() -> Element {
 
 #[component]
 fn WalletList() -> Element {
-    let mut db = database_mut();
+    log::debug!("WalletList Rendered");
 
-    let wallet_names = Wallet::list_names(&db)
-        .map_err(log_error)
-        .unwrap_or_default();
+    let wallet_names = hook_helpers::use_resource_wallet_names();
+
+    use_drop(|| log::debug!("WalletList Dropped"));
 
     rsx! {
         div { class: "max-w-80 md:container mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-12",
-            for wallet_name in wallet_names {
-                WalletItem { key: "{wallet_name}", wallet_name }
+
+            div {
+
+                if let Some(ref wallet_names) = *wallet_names.read() {
+                    for wallet_name in wallet_names {
+                        div {
+                            key: "{wallet_name}",
+                            class: "w-full aspect-square content-center",
+                            WalletItem { wallet_name }
+                        }
+                    }
+                }
             }
             for i in 0..30 {
-                div {
-                    key: "{i}",
-                    class: "card card-compact aspect-square border p-6",
-                    "Pouet {i}"
+                div { key: "{i}", class: "w-full aspect-square content-center",
+                    div { class: "card aspect-square border p-6 mx-auto w-fit", "Pouet {i}" }
                 }
             }
         }
@@ -50,149 +53,90 @@ fn WalletList() -> Element {
 
 #[component]
 fn WalletItem(wallet_name: String) -> Element {
+    log::debug!("WalletItem Rendered");
+
     let navigator = use_navigator();
-    let user_id = use_context::<Signal<Option<UserId>, SyncStorage>>();
 
-    let wallet = Wallet::load(database().deref(), &wallet_name)
-        .expect("wallet should exist and I have nothing smart to do with this error anyway");
+    let wallet = hook_helpers::use_resource_wallet(wallet_name.clone());
+    let wallet_status = hook_helpers::use_resource_wallet_status(wallet);
+    let fingerprint = hook_helpers::use_memo_fingerprint(wallet);
 
-    let key_provider_badge_value = match wallet.key_provider() {
-        AnyKeyProvider::None => "Watch-Only",
-        AnyKeyProvider::LocalKey(_) => "Local Key",
-        AnyKeyProvider::Ledger(_) => "Ledger",
-    };
-    let key_provider_badge_color = match wallet.key_provider() {
-        AnyKeyProvider::None => "badge-secondary",
-        AnyKeyProvider::LocalKey(_) => "badge-secondary",
-        AnyKeyProvider::Ledger(_) => "badge-secondary",
-    };
-
-    let online_wallet_badge_value = match wallet.online_wallet() {
-        AnyOnlineWallet::None => "Sign-Only",
-        AnyOnlineWallet::Service(_) => "Service",
-        AnyOnlineWallet::Local(_) => "Local Node",
-    };
-
-    let wallet_status = match wallet.online_wallet() {
-        AnyOnlineWallet::None => Some(Err::<WalletStatus, ()>(())),
-        AnyOnlineWallet::Service(service_binding) => {
-            let service_binding = service_binding.clone();
-            use_resource(move || {
-                // Bind to user ID
-                let _ = user_id.read();
-                let mut service_binding = service_binding.clone();
-                async {
-                    tokio::task::spawn_blocking(move || {
-                        if !service_binding.has_service_client() {
-                            service_binding.init_service_client_unchecked(service_client());
-                        }
-                        service_binding.get_wallet_status().map_err(|e| {
-                            log::warn!("{e}");
-                            ()
-                        })
-                    })
-                    .await
-                    .unwrap()
-                }
-            })
-            .cloned()
-        }
-        AnyOnlineWallet::Local(local_heritage_wallet) => {
-            Some(local_heritage_wallet.get_wallet_status().map_err(|e| {
-                log::warn!("{e}");
-                ()
-            }))
-        }
-    };
-
-    let online_wallet_badge_color = match wallet.online_wallet() {
-        AnyOnlineWallet::None => "badge-secondary",
-        AnyOnlineWallet::Service(_) => {
-            if user_id.read().is_none() {
-                "badge-error"
-            } else {
-                match wallet_status {
-                    Some(Ok(_)) => "badge-success",
-                    Some(Err(_)) => "badge-error",
-                    None => "badge-secondary",
-                }
-            }
-        }
-        AnyOnlineWallet::Local(_) => "badge-secondary",
-    };
-
-    let is_loading = wallet_status.is_none();
-
-    let last_sync = wallet_status.as_ref().map(|rws| match rws {
-        Ok(ws) => timestamp_to_string(ws.last_sync_ts),
-        Err(_) => "-".to_owned(),
-    });
-
-    let balance = wallet_status.as_ref().map(|rws| match rws {
-        Ok(ws) => amount_to_string(Amount::from_sat(ws.balance.total_balance().get_total())),
-        Err(_) => "-".to_owned(),
-    });
-
-    let cur_balance = wallet_status.as_ref().map(|rws| match rws {
-        Ok(ws) => amount_to_string(Amount::from_sat(ws.balance.uptodate_balance().get_total())),
-        Err(_) => "-".to_owned(),
-    });
-    let obs_balance = wallet_status.as_ref().map(|rws| match rws {
-        Ok(ws) => amount_to_string(Amount::from_sat(ws.balance.obsolete_balance().get_total())),
-        Err(_) => "-".to_owned(),
-    });
-
-    let fingerprint = wallet
-        .fingerprint()
-        .map(|fg| fg.to_string())
-        .unwrap_or_else(|e| {
-            log::warn!("{e}");
-            "-".to_owned()
-        });
+    use_drop(|| log::debug!("WalletItem Dropped"));
 
     rsx! {
         div {
-            class: "card card-compact aspect-square border shadow-xl",
+            class: "card card-lg aspect-square border shadow-xl max-h-fit h-full mx-auto",
             onclick: move |_| {
                 navigator
                     .push(Route::WalletView {
-                        wallet_name: wallet.name().to_owned(),
+                        wallet_name: wallet_name.clone(),
                     });
             },
             div { class: "card-body",
                 div {
-                    div { class: "card-title text-3xl font-black", "{wallet.name()}" }
-                    div { class: "text-sm font-light", {fingerprint} }
+                    div { class: "card-title text-3xl font-black", "{wallet_name}" }
+                    div { class: "text-sm font-light", "{fingerprint}" }
                 }
                 div { class: "grow" }
 
-                if is_loading {
-                    div { class: "skeleton h-20 w-20" }
-                } else {
-                    div { class: "text-sm text-left", "Balance" }
-                    div { class: "text-4xl font-black text-center", {balance} }
-                    div { class: "text-medium font-light text-center",
-                        "Current: "
-                        {cur_balance}
-                        " | Obsolete: "
-                        {obs_balance}
-                    }
-                    div { class: "text-sm font-light text-left",
-                        "Last Sync: "
-                        {last_sync}
-                    }
-                }
+                WalletItemBalance { wallet_status }
 
                 div { class: "grow" }
                 div { class: "mx-auto flex flex-row gap-6",
-                    div { class: "badge shadow-md {key_provider_badge_color}",
-                        {key_provider_badge_value}
-                    }
-                    div { class: "badge shadow-md {online_wallet_badge_color}",
-                        {online_wallet_badge_value}
-                    }
+                    KeyProviderBadge { wallet }
+                    OnlineWalletBadge { wallet, wallet_status }
+                }
+            
+            }
+        }
+    }
+}
+
+#[component]
+fn WalletItemBalance(wallet_status: Resource<Option<WalletStatus>>) -> Element {
+    let last_synced = hook_helpers::use_memo_last_sync(wallet_status);
+    let balance_strings = hook_helpers::use_memo_balance_strings(wallet_status);
+
+    let is_skeleton = balance_strings.read().is_none();
+    let hook_helpers::BalanceStrings {
+        balance,
+        cur_balance,
+        obs_balance,
+    } = balance_strings.cloned().unwrap_or_default();
+
+    rsx! {
+        div { class: "text-base", "Balance" }
+        div {
+            div {
+                class: "text-nowrap text-3xl font-black",
+                class: if is_skeleton { "skeleton text-transparent" },
+                {balance}
+            }
+            div { class: "text-nowrap font-light text-sm",
+                "Current: "
+                span {
+                    class: "font-bold",
+                    class: if is_skeleton { "skeleton text-transparent" },
+                    {cur_balance}
                 }
             }
+            div { class: "text-nowrap font-light text-sm",
+                "Obsolete: "
+                span {
+                    class: "font-bold",
+                    class: if is_skeleton { "skeleton text-transparent" },
+                    {obs_balance}
+                }
+            }
+        }
+        div { class: "text-sm font-light text-left",
+            "Last Sync: "
+            span {
+                class: "font-semibold",
+                class: if last_synced.read().is_none() { "skeleton text-transparent" },
+                {last_synced.cloned().unwrap_or_default().0}
+            }
+        
         }
     }
 }
