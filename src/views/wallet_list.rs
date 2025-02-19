@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use dioxus::prelude::*;
 
 use super::TitledView;
@@ -33,7 +35,7 @@ fn WalletList() -> Element {
             div {
 
                 if let Some(ref wallet_names) = *wallet_names.read() {
-                    for wallet_name in wallet_names {
+                    for wallet_name in wallet_names.into_iter().cloned() {
                         div {
                             key: "{wallet_name}",
                             class: "w-full aspect-square content-center",
@@ -52,7 +54,7 @@ fn WalletList() -> Element {
 }
 
 #[component]
-fn WalletItem(wallet_name: String) -> Element {
+fn WalletItem(wallet_name: Arc<str>) -> Element {
     log::debug!("WalletItem Rendered");
 
     let navigator = use_navigator();
@@ -69,7 +71,7 @@ fn WalletItem(wallet_name: String) -> Element {
             onclick: move |_| {
                 navigator
                     .push(Route::WalletView {
-                        wallet_name: wallet_name.clone(),
+                        wallet_name: wallet_name.clone().into(),
                     });
             },
             div { class: "card-body",

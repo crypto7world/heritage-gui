@@ -3,6 +3,8 @@ mod config;
 mod database;
 mod service;
 
+use std::sync::Arc;
+
 use btc_heritage_wallet::{
     heritage_service_api_client::DeviceAuthorizationResponse, AnyKeyProvider, AnyOnlineWallet,
     Wallet,
@@ -60,7 +62,7 @@ pub async fn disconnect() -> Result<bool, String> {
     result
 }
 
-pub async fn list_wallet_names() -> Result<Vec<String>, String> {
+pub async fn list_wallet_names() -> Result<Vec<Arc<str>>, String> {
     log::debug!("list_wallet_names - start");
     let database_service = use_coroutine_handle::<DatabaseCommand>();
     let (result, rx) = oneshot::channel();
@@ -72,7 +74,7 @@ pub async fn list_wallet_names() -> Result<Vec<String>, String> {
     wallet_names
 }
 
-pub async fn list_heir_names() -> Result<Vec<String>, String> {
+pub async fn list_heir_names() -> Result<Vec<Arc<str>>, String> {
     log::debug!("list_heir_names - start");
     let database_service = use_coroutine_handle::<DatabaseCommand>();
     let (result, rx) = oneshot::channel();
@@ -84,7 +86,7 @@ pub async fn list_heir_names() -> Result<Vec<String>, String> {
     heir_names
 }
 
-pub async fn list_heir_wallet_names() -> Result<Vec<String>, String> {
+pub async fn list_heir_wallet_names() -> Result<Vec<Arc<str>>, String> {
     log::debug!("list_heir_wallet_names - start");
     let database_service = use_coroutine_handle::<DatabaseCommand>();
     let (result, rx) = oneshot::channel();
@@ -96,15 +98,17 @@ pub async fn list_heir_wallet_names() -> Result<Vec<String>, String> {
     heir_wallet_names
 }
 
-pub async fn get_wallet(name: &str) -> Result<Wallet, String> {
+pub async fn get_wallet(name: Arc<str>) -> Result<Wallet, String> {
     log::debug!("get_wallet({name}) - start");
     let database_service = use_coroutine_handle::<DatabaseCommand>();
     let service_client_service = use_coroutine_handle::<ServiceClientCommand>();
     let (result, rx) = oneshot::channel();
 
-    let name = unsafe { std::mem::transmute::<&str, &'static str>(name) };
     database_service.send(DatabaseCommand::Wallet(
-        DatabaseItemCommand::LoadDatabaseItem { name, result },
+        DatabaseItemCommand::LoadDatabaseItem {
+            name: name.clone(),
+            result,
+        },
     ));
     let mut wallet = rx
         .await

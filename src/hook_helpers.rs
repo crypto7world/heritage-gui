@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use btc_heritage_wallet::{
     bitcoin::Amount,
@@ -14,7 +14,7 @@ use crate::{
     utils::{amount_to_string, timestamp_to_string, wait_resource},
 };
 
-pub fn use_resource_wallet_names() -> dioxus::hooks::Resource<Vec<String>> {
+pub fn use_resource_wallet_names() -> dioxus::hooks::Resource<Vec<Arc<str>>> {
     dioxus::hooks::use_resource(move || async move {
         log::debug!("use_resource_wallet_names - start");
         let wallet_names = state_management::list_wallet_names()
@@ -25,7 +25,7 @@ pub fn use_resource_wallet_names() -> dioxus::hooks::Resource<Vec<String>> {
     })
 }
 
-pub fn use_resource_heir_names() -> dioxus::hooks::Resource<Vec<String>> {
+pub fn use_resource_heir_names() -> dioxus::hooks::Resource<Vec<Arc<str>>> {
     dioxus::hooks::use_resource(move || async move {
         log::debug!("use_resource_heir_names - start");
         let heir_names = state_management::list_heir_names()
@@ -36,7 +36,7 @@ pub fn use_resource_heir_names() -> dioxus::hooks::Resource<Vec<String>> {
     })
 }
 
-pub fn use_resource_heirwallet_names() -> dioxus::hooks::Resource<Vec<String>> {
+pub fn use_resource_heirwallet_names() -> dioxus::hooks::Resource<Vec<Arc<str>>> {
     dioxus::hooks::use_resource(move || async move {
         log::debug!("use_resource_heir_names - start");
         let heir_wallet_names = state_management::list_heir_wallet_names()
@@ -47,12 +47,12 @@ pub fn use_resource_heirwallet_names() -> dioxus::hooks::Resource<Vec<String>> {
     })
 }
 
-pub fn use_resource_wallet(name: String) -> dioxus::hooks::Resource<Wallet> {
+pub fn use_resource_wallet(name: Arc<str>) -> dioxus::hooks::Resource<Wallet> {
     dioxus::hooks::use_resource(move || {
         let name = name.clone();
         async move {
             log::debug!("use_resource_wallet - start");
-            let wallet = state_management::get_wallet(name.as_str()).await.expect(
+            let wallet = state_management::get_wallet(name).await.expect(
                 "wallet should exist and I have nothing smart to do with this error anyway",
             );
             log::debug!("use_resource_wallet - loaded");

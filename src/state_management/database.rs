@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use dioxus::prelude::*;
 
 use btc_heritage_wallet::{
@@ -10,19 +12,19 @@ use tokio::sync::oneshot;
 
 pub(super) enum DatabaseItemCommand<DBI: DatabaseItem + 'static> {
     CreateDatabaseItem {
-        item: &'static DBI,
+        item: Arc<DBI>,
         result: oneshot::Sender<Result<(), DbError>>,
     },
     LoadDatabaseItem {
-        name: &'static str,
+        name: Arc<str>,
         result: oneshot::Sender<Result<DBI, DbError>>,
     },
     SaveDatabaseItem {
-        item: &'static DBI,
+        item: Arc<DBI>,
         result: oneshot::Sender<Result<(), DbError>>,
     },
     ListDatabaseItemNames {
-        result: oneshot::Sender<Result<Vec<String>, DbError>>,
+        result: oneshot::Sender<Result<Vec<Arc<str>>, DbError>>,
     },
     ListDatabaseItem {
         result: oneshot::Sender<Result<Vec<DBI>, DbError>>,
@@ -57,7 +59,7 @@ pub(super) enum TokensCommand {
         >,
     },
     Save {
-        tokens: &'static Tokens,
+        tokens: Arc<Tokens>,
         result:
             oneshot::Sender<Result<(), btc_heritage_wallet::heritage_service_api_client::Error>>,
     },
@@ -130,7 +132,7 @@ async fn process_db_item_command<DBI: std::fmt::Debug + DatabaseItem + Sync>(
         }
         DatabaseItemCommand::LoadDatabaseItem { name, result } => {
             result
-                .send(DBI::load(db, name).await)
+                .send(DBI::load(db, &name).await)
                 .expect("chanel failure");
         }
         DatabaseItemCommand::SaveDatabaseItem { item, result } => {
@@ -138,7 +140,11 @@ async fn process_db_item_command<DBI: std::fmt::Debug + DatabaseItem + Sync>(
         }
         DatabaseItemCommand::ListDatabaseItemNames { result } => {
             result
-                .send(DBI::list_names(db).await)
+                .send(
+                    DBI::list_names(db)
+                        .await
+                        .map(|strings| strings.into_iter().map(|s| Arc::from(s)).collect()),
+                )
                 .expect("chanel failure");
         }
         DatabaseItemCommand::ListDatabaseItem { result } => {

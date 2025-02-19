@@ -1,3 +1,5 @@
+use std::{convert::Infallible, ops::Deref, str::FromStr, sync::Arc};
+
 use btc_heritage_wallet::bitcoin::{Amount, Denomination};
 
 pub fn log_error<E: core::fmt::Display>(error: E) -> String {
@@ -24,5 +26,32 @@ pub fn timestamp_to_string(ts: u64) -> String {
 pub async fn wait_resource<T: 'static>(resource: dioxus::hooks::Resource<T>) {
     while !resource.finished() {
         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ArcStr(Arc<str>);
+impl FromStr for ArcStr {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(ArcStr(Arc::from(String::from(s))))
+    }
+}
+impl From<ArcStr> for Arc<str> {
+    fn from(value: ArcStr) -> Self {
+        value.0
+    }
+}
+impl From<Arc<str>> for ArcStr {
+    fn from(value: Arc<str>) -> Self {
+        ArcStr(value)
+    }
+}
+impl Deref for ArcStr {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
     }
 }

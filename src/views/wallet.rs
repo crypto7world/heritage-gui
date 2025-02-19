@@ -1,13 +1,17 @@
+use std::sync::Arc;
+
 use btc_heritage_wallet::{
     btc_heritage::bitcoincore_rpc::jsonrpc::serde_json, online_wallet::WalletStatus, Wallet,
 };
 use dioxus::prelude::*;
 
-use crate::{hook_helpers, views::TitledView};
+use crate::{hook_helpers, utils::ArcStr, views::TitledView};
 
 #[component]
-pub fn WalletView(wallet_name: String) -> Element {
+pub fn WalletView(wallet_name: ArcStr) -> Element {
     log::debug!("WalletView Rendered");
+
+    let wallet_name: Arc<str> = wallet_name.into();
 
     let wallet = hook_helpers::use_resource_wallet(wallet_name.clone());
     let wallet_status = hook_helpers::use_resource_wallet_status(wallet);

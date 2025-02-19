@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+
 use dioxus::{
     desktop::{Config, LogicalSize, WindowBuilder},
     prelude::*,
@@ -6,6 +7,7 @@ use dioxus::{
 
 use crate::{
     components::{Footer, NavBar},
+    utils::ArcStr,
     views::{
         heir_list::HeirListView, inheritances::InheritanceListView, wallet::WalletView,
         wallet_list::WalletListView,
@@ -39,7 +41,7 @@ pub enum Route {
             #[route("/")]
             WalletListView {},
             #[route("/:wallet_name")]
-            WalletView { wallet_name: String },
+            WalletView { wallet_name: ArcStr },
         #[end_nest]
         #[nest("/heirs")]
             #[route("/")]
