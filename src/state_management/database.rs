@@ -1,33 +1,35 @@
-use std::sync::Arc;
-
 use dioxus::prelude::*;
+
+use futures_util::stream::StreamExt;
+use std::sync::Arc;
+use tokio::sync::oneshot;
 
 use btc_heritage_wallet::{
     errors::DbError,
     heritage_service_api_client::{TokenCache, Tokens},
     Database, DatabaseItem, Heir, HeirWallet, Wallet,
 };
-use futures_util::stream::StreamExt;
-use tokio::sync::oneshot;
 
-pub(super) enum DatabaseItemCommand<DBI: DatabaseItem + 'static> {
+use crate::utils::{RcStr, RcType};
+
+pub enum DatabaseItemCommand<DBI: DatabaseItem + 'static> {
     CreateDatabaseItem {
-        item: Arc<DBI>,
+        item: RcType<DBI>,
         result: oneshot::Sender<Result<(), DbError>>,
     },
     LoadDatabaseItem {
-        name: Arc<str>,
+        name: RcStr,
         result: oneshot::Sender<Result<DBI, DbError>>,
     },
     SaveDatabaseItem {
-        item: Arc<DBI>,
+        item: RcType<DBI>,
         result: oneshot::Sender<Result<(), DbError>>,
     },
     ListDatabaseItemNames {
-        result: oneshot::Sender<Result<Vec<Arc<str>>, DbError>>,
+        result: oneshot::Sender<Result<Vec<RcStr>, DbError>>,
     },
-    ListDatabaseItem {
-        result: oneshot::Sender<Result<Vec<DBI>, DbError>>,
+    ListDatabaseItems {
+        result: oneshot::Sender<Result<Vec<RcType<DBI>>, DbError>>,
     },
 }
 impl<DBI: DatabaseItem + 'static> core::fmt::Debug for DatabaseItemCommand<DBI> {
@@ -45,14 +47,14 @@ impl<DBI: DatabaseItem + 'static> core::fmt::Debug for DatabaseItemCommand<DBI> 
             Self::ListDatabaseItemNames { .. } => f
                 .debug_struct("ListDatabaseItemNames")
                 .finish_non_exhaustive(),
-            Self::ListDatabaseItem { .. } => {
+            Self::ListDatabaseItems { .. } => {
                 f.debug_struct("ListDatabaseItem").finish_non_exhaustive()
             }
         }
     }
 }
 
-pub(super) enum TokensCommand {
+pub enum TokensCommand {
     Load {
         result: oneshot::Sender<
             Result<Option<Tokens>, btc_heritage_wallet::heritage_service_api_client::Error>,
@@ -79,7 +81,7 @@ impl core::fmt::Debug for TokensCommand {
 }
 
 #[derive(Debug)]
-pub(super) enum DatabaseCommand {
+pub enum DatabaseCommand {
     Wallet(DatabaseItemCommand<Wallet>),
     Heir(DatabaseItemCommand<Heir>),
     HeirWallet(DatabaseItemCommand<HeirWallet>),
@@ -143,13 +145,17 @@ async fn process_db_item_command<DBI: std::fmt::Debug + DatabaseItem + Sync>(
                 .send(
                     DBI::list_names(db)
                         .await
-                        .map(|strings| strings.into_iter().map(|s| Arc::from(s)).collect()),
+                        .map(|strings| strings.into_iter().map(RcStr::from).collect()),
                 )
                 .expect("chanel failure");
         }
-        DatabaseItemCommand::ListDatabaseItem { result } => {
+        DatabaseItemCommand::ListDatabaseItems { result } => {
             result
-                .send(DBI::all_in_db(db).await)
+                .send(
+                    DBI::all_in_db(db)
+                        .await
+                        .map(|r| r.into_iter().map(RcType::from).collect()),
+                )
                 .expect("chanel failure");
         }
     }

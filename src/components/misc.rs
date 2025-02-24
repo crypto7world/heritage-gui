@@ -1,5 +1,57 @@
 use dioxus::prelude::*;
 
+use crate::utils::{
+    timestamp_to_date_string, timestamp_to_string, LoadedElement, PlaceHolder, RcStr,
+};
+
+#[component]
+pub fn Tooltip(tooltip_text: RcStr, children: Element) -> Element {
+    rsx! {
+        div {
+            class: "tooltip before:text-xs before:text-white hover:after:delay-300 hover:before:delay-300",
+            "data-tip": "{tooltip_text}",
+            {children}
+        }
+    }
+}
+
+#[component]
+pub fn Modal(
+    is_open: Signal<bool>,
+    #[props(default = false)] persistent: bool,
+    children: Element,
+) -> Element {
+    let mut classes = use_signal(|| String::new());
+
+    rsx! {
+        input {
+            r#type: "checkbox",
+            name: "modal-toggle",
+            class: "modal-toggle",
+            tabindex: "-1",
+            checked: is_open(),
+        }
+        div {
+            class: "modal",
+            role: "dialog",
+            onclick: move |event| {
+                event.stop_propagation();
+                if persistent {
+                    spawn(async move {
+                        let orig_len = classes.read().len();
+                        *classes.write() += "animate-scalebump";
+                        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                        classes.write().truncate(orig_len);
+                    });
+                } else {
+                    *is_open.write() = false;
+                }
+            },
+            div { class: "modal-box max-w-max {classes}", {children} }
+        }
+    }
+}
+
 #[component]
 pub fn LoremIpsum() -> Element {
     rsx! {
@@ -17,6 +69,56 @@ pub fn LoremIpsum() -> Element {
         }
         p {
             "Nam magna elit, lobortis sed malesuada vel, tempus a tellus. Maecenas ullamcorper posuere lacus et porttitor. Duis congue pulvinar metus, a pretium mi sodales vel. Lorem ipsum dolor sit amet, consectetur adipiscing elit. In quam neque, cursus a ex ut, ultrices imperdiet erat. Ut mollis at enim a tempus. Sed commodo eros ut neque scelerisque laoreet. Etiam sed sodales tellus. Sed commodo, ex ac tempus maximus, purus nunc tempor erat, sit amet dapibus turpis lacus nec augue. Nulla dapibus vel leo eget congue. Quisque rutrum lobortis purus, vel convallis est posuere eu."
+        }
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplayTimestamp {
+    Ts(u64),
+    None,
+    Never,
+}
+impl From<u64> for DisplayTimestamp {
+    fn from(value: u64) -> Self {
+        DisplayTimestamp::Ts(value)
+    }
+}
+impl PlaceHolder for DisplayTimestamp {
+    fn place_holder() -> Self {
+        Self::Ts(0)
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DisplayTimestampStyle {
+    #[default]
+    Full,
+    DateOnly,
+}
+
+#[component]
+pub fn Date(
+    timestamp: LoadedElement<DisplayTimestamp>,
+    display_style: Option<DisplayTimestampStyle>,
+) -> Element {
+    let (is_place_holder, timestamp) = timestamp.extract();
+
+    let display_style = display_style.unwrap_or_default();
+
+    let last_synced_s = match timestamp {
+        DisplayTimestamp::Ts(timestamp) => match display_style {
+            DisplayTimestampStyle::Full => timestamp_to_string(timestamp),
+            DisplayTimestampStyle::DateOnly => timestamp_to_date_string(timestamp),
+        },
+        DisplayTimestamp::None => "-".to_owned(),
+        DisplayTimestamp::Never => "Never".to_owned(),
+    };
+    let display_text = last_synced_s.as_str();
+
+    rsx! {
+        span {
+            class: "text-nowrap inline-block",
+            class: if is_place_holder { "skeleton text-transparent" },
+            {display_text}
         }
     }
 }

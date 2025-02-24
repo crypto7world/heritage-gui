@@ -3,29 +3,40 @@ mod config;
 mod database;
 mod service;
 
-use std::sync::Arc;
+use dioxus::prelude::*;
 
-use btc_heritage_wallet::{
-    heritage_service_api_client::DeviceAuthorizationResponse, AnyKeyProvider, AnyOnlineWallet,
-    Wallet,
-};
-use dioxus::hooks::{use_coroutine, use_coroutine_handle};
 use tokio::sync::oneshot;
 
-use crate::utils::log_error;
+use btc_heritage_wallet::{
+    heritage_service_api_client::{DeviceAuthorizationResponse, HeritageServiceClient},
+    AnyKeyProvider, AnyOnlineWallet, Heir, Wallet,
+};
+
+use crate::utils::{log_error, RcStr, RcType};
 use database::{DatabaseCommand, DatabaseItemCommand};
 use service::ServiceClientCommand;
 
 pub use service::CONNECTED_USER;
 
-pub fn init_services() {
+pub fn use_init_services() {
     log::debug!("init_services - start");
     use_coroutine(database::database_service);
     use_coroutine(service::service_client_service);
     log::debug!("init_services - finished");
 }
 
-pub async fn connect<F, Fut>(callback: F) -> Result<(), String>
+pub fn use_database_service() -> Coroutine<DatabaseCommand> {
+    use_coroutine_handle()
+}
+
+pub fn use_service_client_service() -> Coroutine<ServiceClientCommand> {
+    use_coroutine_handle()
+}
+
+pub async fn connect<F, Fut>(
+    service_client_service: Coroutine<ServiceClientCommand>,
+    callback: F,
+) -> Result<(), String>
 where
     F: FnOnce(DeviceAuthorizationResponse) -> Fut + 'static,
     Fut: std::future::Future<
@@ -33,7 +44,6 @@ where
         > + 'static,
 {
     log::debug!("connect - start");
-    let service_client_service = use_coroutine_handle::<ServiceClientCommand>();
     let (result, waiter) = oneshot::channel();
     service_client_service.send(ServiceClientCommand::Connect {
         callback: Box::new(|dar| Box::pin(callback(dar))),
@@ -48,9 +58,10 @@ where
     result
 }
 
-pub async fn disconnect() -> Result<bool, String> {
+pub async fn disconnect(
+    service_client_service: Coroutine<ServiceClientCommand>,
+) -> Result<bool, String> {
     log::debug!("disconnect - start");
-    let service_client_service = use_coroutine_handle::<ServiceClientCommand>();
     let (result, waiter) = oneshot::channel();
     service_client_service.send(ServiceClientCommand::Disconnect { result });
     let result = waiter
@@ -62,9 +73,22 @@ pub async fn disconnect() -> Result<bool, String> {
     result
 }
 
-pub async fn list_wallet_names() -> Result<Vec<Arc<str>>, String> {
+pub async fn heritage_service_client(
+    service_client_service: Coroutine<ServiceClientCommand>,
+) -> HeritageServiceClient {
+    log::debug!("heritage_service_client - start");
+    let (result, waiter) = oneshot::channel();
+    service_client_service.send(ServiceClientCommand::GetServiceClient { result });
+    let result = waiter.await.expect("service_client_service error");
+
+    log::debug!("heritage_service_client - finished");
+    result
+}
+
+pub async fn list_wallet_names(
+    database_service: Coroutine<DatabaseCommand>,
+) -> Result<Vec<RcStr>, String> {
     log::debug!("list_wallet_names - start");
-    let database_service = use_coroutine_handle::<DatabaseCommand>();
     let (result, rx) = oneshot::channel();
     database_service.send(DatabaseCommand::Wallet(
         DatabaseItemCommand::ListDatabaseItemNames { result },
@@ -73,10 +97,23 @@ pub async fn list_wallet_names() -> Result<Vec<Arc<str>>, String> {
     log::debug!("list_wallet_names - loaded");
     wallet_names
 }
+pub async fn list_wallets(
+    database_service: Coroutine<DatabaseCommand>,
+) -> Result<Vec<RcType<Wallet>>, String> {
+    log::debug!("list_wallets - start");
+    let (result, rx) = oneshot::channel();
+    database_service.send(DatabaseCommand::Wallet(
+        DatabaseItemCommand::ListDatabaseItems { result },
+    ));
+    let wallets = rx.await.expect("database_service error").map_err(log_error);
+    log::debug!("list_wallets - loaded");
+    wallets
+}
 
-pub async fn list_heir_names() -> Result<Vec<Arc<str>>, String> {
+pub async fn list_heir_names(
+    database_service: Coroutine<DatabaseCommand>,
+) -> Result<Vec<RcStr>, String> {
     log::debug!("list_heir_names - start");
-    let database_service = use_coroutine_handle::<DatabaseCommand>();
     let (result, rx) = oneshot::channel();
     database_service.send(DatabaseCommand::Heir(
         DatabaseItemCommand::ListDatabaseItemNames { result },
@@ -85,10 +122,23 @@ pub async fn list_heir_names() -> Result<Vec<Arc<str>>, String> {
     log::debug!("list_heir_names - loaded");
     heir_names
 }
+pub async fn list_heirs(
+    database_service: Coroutine<DatabaseCommand>,
+) -> Result<Vec<RcType<Heir>>, String> {
+    log::debug!("list_heirs - start");
+    let (result, rx) = oneshot::channel();
+    database_service.send(DatabaseCommand::Heir(
+        DatabaseItemCommand::ListDatabaseItems { result },
+    ));
+    let heirs = rx.await.expect("database_service error").map_err(log_error);
+    log::debug!("list_heirs - loaded");
+    heirs
+}
 
-pub async fn list_heir_wallet_names() -> Result<Vec<Arc<str>>, String> {
+pub async fn list_heir_wallet_names(
+    database_service: Coroutine<DatabaseCommand>,
+) -> Result<Vec<RcStr>, String> {
     log::debug!("list_heir_wallet_names - start");
-    let database_service = use_coroutine_handle::<DatabaseCommand>();
     let (result, rx) = oneshot::channel();
     database_service.send(DatabaseCommand::HeirWallet(
         DatabaseItemCommand::ListDatabaseItemNames { result },
@@ -98,9 +148,11 @@ pub async fn list_heir_wallet_names() -> Result<Vec<Arc<str>>, String> {
     heir_wallet_names
 }
 
-pub async fn get_wallet(name: Arc<str>) -> Result<Wallet, String> {
+pub async fn get_wallet(
+    database_service: Coroutine<DatabaseCommand>,
+    name: RcStr,
+) -> Result<Wallet, String> {
     log::debug!("get_wallet({name}) - start");
-    let database_service = use_coroutine_handle::<DatabaseCommand>();
     let service_client_service = use_coroutine_handle::<ServiceClientCommand>();
     let (result, rx) = oneshot::channel();
 

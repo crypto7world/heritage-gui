@@ -1,13 +1,14 @@
 use dioxus::prelude::*;
 
-use btc_heritage_wallet::{
-    btc_heritage::bitcoincore_rpc::jsonrpc::serde_json,
-    heritage_service_api_client::{DeviceAuthorizationResponse, HeritageServiceClient, Tokens},
-};
 use futures_util::stream::StreamExt;
 use serde::Deserialize;
 use std::{pin::Pin, sync::Arc};
 use tokio::sync::oneshot;
+
+use btc_heritage_wallet::{
+    btc_heritage::bitcoincore_rpc::jsonrpc::serde_json,
+    heritage_service_api_client::{DeviceAuthorizationResponse, HeritageServiceClient, Tokens},
+};
 
 use super::database::{DatabaseCommand, TokensCommand};
 
@@ -35,7 +36,7 @@ type Callback = Box<
     >,
 >;
 
-pub(super) enum ServiceClientCommand {
+pub enum ServiceClientCommand {
     Connect {
         callback: Callback,
         result:

@@ -1,10 +1,13 @@
+use dioxus::prelude::*;
+
 use std::{ops::Deref, sync::Arc};
 
 use btc_heritage_wallet::DatabaseItem;
-use dioxus::prelude::*;
 
 pub mod heir_list;
+pub mod home;
 pub mod inheritances;
+pub mod main_layout;
 pub mod wallet;
 pub mod wallet_list;
 
