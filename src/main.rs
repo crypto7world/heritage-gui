@@ -12,7 +12,7 @@ use views::{
     home::Home,
     inheritances::InheritanceListView,
     main_layout::MainLayout,
-    wallet::{WalletView, WalletWrapperLayout},
+    wallet::{configuration::WalletConfigurationView, WalletView, WalletWrapperLayout},
     wallet_list::WalletListView,
 };
 
@@ -29,6 +29,8 @@ pub enum Route {
             #[layout(WalletWrapperLayout)]
                 #[route("/")]
                 WalletView{ wallet_name: RcStr },
+                #[route("/configuration")]
+                WalletConfigurationView{ wallet_name: RcStr },
             #[end_layout]
             #[end_nest]
         #[end_nest]

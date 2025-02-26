@@ -122,3 +122,131 @@ pub fn Date(
         }
     }
 }
+
+pub trait BadgeType: 'static + Clone + PartialEq {
+    fn text(&self) -> &'static str;
+    fn color_class(&self) -> &'static str;
+    fn tooltip(&self) -> &'static str;
+}
+
+#[component]
+pub fn Badge<B: BadgeType>(badge: B) -> Element {
+    rsx! {
+        Tooltip { tooltip_text: RcStr::from(badge.tooltip()),
+            div { class: "badge shadow-xl text-nowrap {badge.color_class()}", {badge.text()} }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WalletBadgeType {
+    OnlineServiceOnline,
+    OnlineServiceOffline,
+    OnlineLocalOnline,
+    OnlineLocalOffline,
+    LocalKeyProvider,
+    LedgerKeyProviderOnline,
+    LedgerKeyProviderOffline,
+    WatchOnly,
+    SignOnly,
+}
+impl BadgeType for WalletBadgeType {
+    fn text(&self) -> &'static str {
+        match self {
+            WalletBadgeType::OnlineServiceOnline | WalletBadgeType::OnlineServiceOffline => {
+                "Service"
+            }
+            WalletBadgeType::OnlineLocalOnline | WalletBadgeType::OnlineLocalOffline => {
+                "Local Node"
+            }
+            WalletBadgeType::SignOnly => "Sign Only",
+            WalletBadgeType::LocalKeyProvider => "Local Key",
+            WalletBadgeType::LedgerKeyProviderOnline
+            | WalletBadgeType::LedgerKeyProviderOffline => "Ledger",
+            WalletBadgeType::WatchOnly => "Watch Only",
+        }
+    }
+    fn color_class(&self) -> &'static str {
+        match self {
+            WalletBadgeType::OnlineServiceOnline
+            | WalletBadgeType::OnlineLocalOnline
+            | WalletBadgeType::LedgerKeyProviderOnline => "badge-success",
+            WalletBadgeType::OnlineServiceOffline
+            | WalletBadgeType::OnlineLocalOffline
+            | WalletBadgeType::LedgerKeyProviderOffline => "badge-error",
+            WalletBadgeType::SignOnly
+            | WalletBadgeType::LocalKeyProvider
+            | WalletBadgeType::WatchOnly => "badge-secondary",
+        }
+    }
+    fn tooltip(&self) -> &'static str {
+        match self {
+            WalletBadgeType::OnlineServiceOnline | WalletBadgeType::OnlineServiceOffline => {
+                "Wallet rely on the Heritage Service for blockchain operations"
+            }
+            WalletBadgeType::OnlineLocalOnline | WalletBadgeType::OnlineLocalOffline => {
+                "Wallet rely on a local node for blockchain operations"
+            }
+            WalletBadgeType::LocalKeyProvider => "This wallet can sign transactions",
+            WalletBadgeType::LedgerKeyProviderOnline => {
+                "Wallet can sign transactions using your Ledger"
+            }
+            WalletBadgeType::LedgerKeyProviderOffline => {
+                "Wallet could sign transactions using your Ledger (but it is not connected)"
+            }
+            WalletBadgeType::WatchOnly => "This wallet cannot sign transactions",
+            WalletBadgeType::SignOnly => "This wallet have no access to the blockchain but may still sign transaction offline",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SkeletonBadgeType;
+
+impl BadgeType for SkeletonBadgeType {
+    fn text(&self) -> &'static str {
+        "PlaceHolder"
+    }
+
+    fn color_class(&self) -> &'static str {
+        "skeleton text-transparent"
+    }
+
+    fn tooltip(&self) -> &'static str {
+        "Loading..."
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum HeirBadgeType {
+    Service,
+    LocalKeyProvider,
+    LedgerKeyProvider,
+    Database,
+}
+impl BadgeType for HeirBadgeType {
+    fn text(&self) -> &'static str {
+        match self {
+            HeirBadgeType::Service => "Service",
+            HeirBadgeType::LocalKeyProvider => "Local Key",
+            HeirBadgeType::LedgerKeyProvider => "Ledger",
+            HeirBadgeType::Database => "App",
+        }
+    }
+    fn color_class(&self) -> &'static str {
+        match self {
+            HeirBadgeType::Service => "badge-success",
+            HeirBadgeType::LocalKeyProvider | HeirBadgeType::LedgerKeyProvider => "badge-secondary",
+            HeirBadgeType::Database => "badge-info",
+        }
+    }
+    fn tooltip(&self) -> &'static str {
+        match self {
+            HeirBadgeType::Service => "Heir is registered in the Heritage service",
+            HeirBadgeType::LocalKeyProvider | HeirBadgeType::LedgerKeyProvider => {
+                "You have the private seed for this heir"
+            }
+            HeirBadgeType::Database => "Heir is registered in this Heritage app",
+        }
+    }
+}

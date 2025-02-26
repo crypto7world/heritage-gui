@@ -1,6 +1,6 @@
-use dioxus::prelude::*;
+use std::rc::Rc;
 
-use std::sync::Arc;
+use dioxus::prelude::*;
 
 use btc_heritage_wallet::{
     heritage_service_api_client::TransactionSummary, DatabaseItem, OnlineWallet, Wallet,
@@ -10,7 +10,7 @@ use crate::{state_management, utils::wait_resource};
 
 pub fn use_resource_wallet_transactions(
     wallet: Resource<Wallet>,
-) -> Resource<Arc<[TransactionSummary]>> {
+) -> Resource<Rc<[TransactionSummary]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_transactions - start");
 

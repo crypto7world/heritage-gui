@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use futures_util::stream::StreamExt;
 use serde::Deserialize;
-use std::{pin::Pin, sync::Arc};
+use std::{pin::Pin, rc::Rc};
 use tokio::sync::oneshot;
 
 use btc_heritage_wallet::{
@@ -92,7 +92,7 @@ pub(super) async fn service_client_service(mut rx: UnboundedReceiver<ServiceClie
                 {
                     Ok(tokens) => {
                         let (tokens_result, tokens_waiter) = oneshot::channel();
-                        let tokens = Arc::new(tokens);
+                        let tokens = Rc::new(tokens);
                         database_service.send(DatabaseCommand::Tokens(TokensCommand::Save {
                             tokens: tokens.clone(),
                             result: tokens_result,
@@ -101,7 +101,7 @@ pub(super) async fn service_client_service(mut rx: UnboundedReceiver<ServiceClie
                             .await
                             .expect("database_service error")
                             .expect("failed to persist tokens");
-                        let tokens = Arc::into_inner(tokens);
+                        let tokens = Rc::into_inner(tokens);
                         if tokens.is_none() {
                             log::error!("Could not take back the ownership of Tokens after saving them in the database")
                         }

@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use futures_util::stream::StreamExt;
-use std::sync::Arc;
+use std::rc::Rc;
 use tokio::sync::oneshot;
 
 use btc_heritage_wallet::{
@@ -61,7 +61,7 @@ pub enum TokensCommand {
         >,
     },
     Save {
-        tokens: Arc<Tokens>,
+        tokens: Rc<Tokens>,
         result:
             oneshot::Sender<Result<(), btc_heritage_wallet::heritage_service_api_client::Error>>,
     },

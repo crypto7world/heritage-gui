@@ -102,8 +102,13 @@ impl<T: PlaceHolder> From<T> for LoadedElement<T> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EqRcType<T>(RcType<T>);
+impl<T> Clone for EqRcType<T> {
+    fn clone(&self) -> Self {
+        Self(RcType::clone(&self.0))
+    }
+}
 impl<T> PartialEq for EqRcType<T> {
     fn eq(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.0 .0, &other.0 .0)
@@ -119,7 +124,13 @@ impl<T> From<EqRcType<T>> for RcType<T> {
         value.0
     }
 }
+impl<T> Deref for EqRcType<T> {
+    type Target = T;
 
+    fn deref(&self) -> &Self::Target {
+        self.0 .0.deref()
+    }
+}
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct RcType<T>(Rc<T>);
 
@@ -134,10 +145,14 @@ impl<T: core::fmt::Display> core::fmt::Display for RcType<T> {
         self.0.fmt(f)
     }
 }
-
+impl<T> RcType<T> {
+    pub fn new(value: T) -> Self {
+        Self(Rc::new(value))
+    }
+}
 impl<T> From<T> for RcType<T> {
     fn from(value: T) -> Self {
-        Self(Rc::new(value))
+        Self(Rc::from(value))
     }
 }
 impl<T> From<RcType<T>> for Rc<T> {
@@ -172,6 +187,12 @@ impl FromStr for RcStr {
         Ok(RcStr(Rc::from(s)))
     }
 }
+
+impl From<&str> for RcStr {
+    fn from(value: &str) -> Self {
+        Self::from_str(value).expect("infaillible")
+    }
+}
 impl From<RcStr> for Rc<str> {
     fn from(value: RcStr) -> Self {
         value.0
@@ -184,7 +205,12 @@ impl From<Rc<str>> for RcStr {
 }
 impl From<String> for RcStr {
     fn from(value: String) -> Self {
-        RcStr(Rc::from(value))
+        Self::from(value.as_str())
+    }
+}
+impl From<&String> for RcStr {
+    fn from(value: &String) -> Self {
+        Self::from(value.as_str())
     }
 }
 impl Deref for RcStr {

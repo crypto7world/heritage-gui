@@ -4,7 +4,7 @@ use btc_heritage_wallet::heritage_service_api_client::HeritageWalletMeta;
 
 use crate::{
     components::{
-        misc::{Date, DisplayTimestamp},
+        misc::{Badge, Date, DisplayTimestamp, WalletBadgeType},
         wallet::{BtcAmount, KeyProviderBadge, OnlineWalletBadge},
     },
     helper_hooks,
@@ -153,10 +153,8 @@ fn ServiceOnlyWalletItem(wallet_meta: EqRcType<HeritageWalletMeta>) -> Element {
 
                     div { class: "grow" }
                     div { class: "mx-auto grid grid-cols-2 gap-6",
-                        div { class: "badge shadow-xl text-nowrap badge-secondary",
-                            "Watch-Only"
-                        }
-                        div { class: "badge shadow-xl text-nowrap badge-success", "Service" }
+                        Badge { badge: WalletBadgeType::WatchOnly }
+                        Badge { badge: WalletBadgeType::OnlineServiceOnline }
                     }
                 }
             }

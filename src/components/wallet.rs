@@ -6,7 +6,10 @@ use btc_heritage_wallet::{
     AnyKeyProvider, AnyOnlineWallet, Wallet,
 };
 
-use crate::utils::{amount_to_signed_string, LoadedElement, PlaceHolder};
+use crate::{
+    components::misc::{Badge, SkeletonBadgeType, WalletBadgeType},
+    utils::{amount_to_signed_string, LoadedElement, PlaceHolder},
+};
 
 #[component]
 pub fn KeyProviderBadge(wallet: ReadOnlySignal<Option<Wallet>>) -> Element {
@@ -18,9 +21,9 @@ pub fn KeyProviderBadge(wallet: ReadOnlySignal<Option<Wallet>>) -> Element {
             .read()
             .as_ref()
             .map(|wallet| match wallet.key_provider() {
-                AnyKeyProvider::None => ("Watch-Only", "badge-secondary"),
-                AnyKeyProvider::LocalKey(_) => ("Local Key", "badge-secondary"),
-                AnyKeyProvider::Ledger(_) => ("Ledger", "badge-secondary"),
+                AnyKeyProvider::None => WalletBadgeType::WatchOnly,
+                AnyKeyProvider::LocalKey(_) => WalletBadgeType::LocalKeyProvider,
+                AnyKeyProvider::Ledger(_) => WalletBadgeType::LedgerKeyProviderOnline,
             });
         log::debug!("use_memo_key_provider_badge - finish compute");
         key_provider_badge
@@ -29,8 +32,8 @@ pub fn KeyProviderBadge(wallet: ReadOnlySignal<Option<Wallet>>) -> Element {
     use_drop(|| log::debug!("KeyProviderBadge Dropped"));
 
     rsx! {
-        if let Some((content, color)) = key_provider_badge() {
-            div { class: "badge shadow-xl text-nowrap {color}", {content} }
+        if let Some(badge) = key_provider_badge() {
+            Badge { badge }
         }
     }
 }
@@ -49,23 +52,17 @@ pub fn OnlineWalletBadge(
                 .read()
                 .as_ref()
                 .map(|wallet| match wallet.online_wallet() {
-                    AnyOnlineWallet::None => ("Sign-Only", "badge-secondary"),
-                    AnyOnlineWallet::Service(_) => (
-                        "Service",
-                        match *wallet_status.read() {
-                            Some(Some(_)) => "badge-success",
-                            Some(None) => "badge-error",
-                            None => "badge-secondary",
-                        },
-                    ),
-                    AnyOnlineWallet::Local(_) => (
-                        "Local Node",
-                        match *wallet_status.read() {
-                            Some(Some(_)) => "badge-success",
-                            Some(None) => "badge-error",
-                            None => "badge-secondary",
-                        },
-                    ),
+                    AnyOnlineWallet::None => Some(WalletBadgeType::SignOnly),
+                    AnyOnlineWallet::Service(_) => match *wallet_status.read() {
+                        Some(Some(_)) => Some(WalletBadgeType::OnlineServiceOnline),
+                        Some(None) => Some(WalletBadgeType::OnlineServiceOffline),
+                        None => None,
+                    },
+                    AnyOnlineWallet::Local(_) => match *wallet_status.read() {
+                        Some(Some(_)) => Some(WalletBadgeType::OnlineLocalOnline),
+                        Some(None) => Some(WalletBadgeType::OnlineLocalOffline),
+                        None => None,
+                    },
                 });
         log::debug!("use_memo_online_wallet_badge - finish compute");
         online_wallet_badge
@@ -73,14 +70,14 @@ pub fn OnlineWalletBadge(
 
     use_drop(|| log::debug!("OnlineWalletBadge Dropped"));
 
-    rsx! {
-        if let Some((content, color)) = online_wallet_badge() {
-            div {
-                class: "badge shadow-xl text-nowrap",
-                class: if wallet_status.read().is_none() { "skeleton" } else { "{color}" },
-                {content}
-            }
-        }
+    match online_wallet_badge() {
+        Some(Some(badge)) => rsx! {
+            Badge { badge }
+        },
+        Some(None) => rsx! {},
+        None => rsx! {
+            Badge { badge: SkeletonBadgeType }
+        },
     }
 }
 

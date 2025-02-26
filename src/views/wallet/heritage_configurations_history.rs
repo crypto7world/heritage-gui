@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, rc::Rc};
 
 use btc_heritage_wallet::{
     bitcoin::SignedAmount,
@@ -8,23 +8,24 @@ use btc_heritage_wallet::{
         heritage_config::HeritageExplorerTrait, utils::timestamp_now, HeirConfig, HeritageConfig,
         HeritageConfigVersion,
     },
-    heritage_service_api_client::{Fingerprint, HeritageUtxo},
+    heritage_service_api_client::HeritageUtxo,
 };
 
 use crate::{
     components::{
-        misc::{Date, DisplayTimestamp, DisplayTimestampStyle},
+        misc::{Badge, Date, DisplayTimestamp, DisplayTimestampStyle, HeirBadgeType},
         wallet::BtcAmount,
     },
-    utils::{LoadedElement, PlaceHolder},
+    helper_hooks::CompositeHeir,
+    utils::{LoadedElement, PlaceHolder, RcType},
 };
 
 #[component]
 pub(super) fn HeritageConfigurationsHistory() -> Element {
     log::debug!("HeritageConfigurationsHistory Rendered");
 
-    let wallet_heritage_configs = use_context::<Resource<Arc<[Arc<HeritageConfig>]>>>();
-    let wallet_utxos = use_context::<Resource<Arc<[HeritageUtxo]>>>();
+    let wallet_heritage_configs = use_context::<Resource<Rc<[Rc<HeritageConfig>]>>>();
+    let wallet_utxos = use_context::<Resource<Rc<[HeritageUtxo]>>>();
 
     let balance_by_heritage_config = use_memo(move || {
         log::debug!("use_memo_utxo_by_heritage_config - start compute");
@@ -149,7 +150,7 @@ impl From<HeritageConfigurationExpirationParams> for HeritageConfigurationExpira
 #[component]
 fn HeritageConfigurationsHistoryItem(
     is_current: bool,
-    heritage_configuration: Option<Arc<HeritageConfig>>,
+    heritage_configuration: Option<Rc<HeritageConfig>>,
     associated_balance: LoadedElement<SignedAmount>,
 ) -> Element {
     log::debug!("HeritageConfigurationsHistoryItem Rendered");
@@ -202,7 +203,10 @@ fn HeritageConfigurationsHistoryItem(
                         div { class: "flex flex-col",
                             div { class: "text-sm font-light", "Expiration" }
                             div { class: "font-bold",
-                                Date { timestamp: expiration_ts }
+                                Date {
+                                    timestamp: expiration_ts,
+                                    display_style: DisplayTimestampStyle::DateOnly,
+                                }
                             }
                         }
                         div { class: "flex flex-col",
@@ -264,7 +268,7 @@ pub fn ExpirationStatusBadge(
 
 #[component]
 fn HeritageConfigurationsHistoryItemContentV1(
-    heritage_configuration: Arc<HeritageConfig>,
+    heritage_configuration: Rc<HeritageConfig>,
 ) -> Element {
     log::debug!("HeritageConfigurationsHistoryItemContentV1 Rendered");
 
@@ -276,32 +280,26 @@ fn HeritageConfigurationsHistoryItemContentV1(
     log::debug!("last_position={last_position}");
 
     let heritages = heritage_v1.iter_heritages().enumerate().map(|(i, h)| {
-        let heir_config_type = match h.get_heir_config() {
-            HeirConfig::SingleHeirPubkey(_) => "Public Key",
-            HeirConfig::HeirXPubkey(_) => "Extended Public Key",
-        };
-        let heir_config_fg = h.heir_config.fingerprint();
+        let heir_config = RcType::from(h.heir_config.clone());
         let locked_for_days = h.time_lock.as_u16();
         let maturity_ts = heritage_v1.reference_timestamp.as_u64() + h.time_lock.as_seconds();
-        (
-            i + 1,
-            heir_config_type,
-            heir_config_fg,
-            locked_for_days,
-            maturity_ts,
-        )
+        (i + 1, heir_config, locked_for_days, maturity_ts)
     });
 
     use_drop(|| log::debug!("HeritageConfigurationsHistoryItemContentV1 Dropped"));
     rsx! {
         div { class: "collapse-content",
-            div { class: "text-lg font-bold", "Heirs" }
+            div { class: "text-lg font-bold",
+                "{last_position} heir"
+                if last_position > 1 {
+                    "s"
+                }
+            }
             ul { class: "timeline timeline-vertical timeline-compact",
-                for (position , heir_config_type , heir_config_fg , locked_for_days , maturity_ts) in heritages {
+                for (position , heir_config , locked_for_days , maturity_ts) in heritages {
                     HeritageConfigurationsHistoryItemContentV1Heir {
                         position,
-                        heir_config_type,
-                        heir_config_fg,
+                        heir_config,
                         locked_for_days,
                         maturity_ts,
                         is_last: position == last_position,
@@ -315,13 +313,21 @@ fn HeritageConfigurationsHistoryItemContentV1(
 #[component]
 fn HeritageConfigurationsHistoryItemContentV1Heir(
     position: usize,
-    heir_config_type: &'static str,
-    heir_config_fg: Fingerprint,
+    heir_config: RcType<HeirConfig>,
     locked_for_days: u16,
     maturity_ts: u64,
     is_last: bool,
 ) -> Element {
     log::debug!("HeritageConfigurationsHistoryItemContentV1Heir Rendered");
+
+    let heir_config_type = match heir_config.deref() {
+        HeirConfig::SingleHeirPubkey(_) => "Public Key",
+        HeirConfig::HeirXPubkey(_) => "Extended Public Key",
+    };
+    let heir_config_fg = heir_config.fingerprint();
+
+    let heirs = use_context::<Memo<HashMap<RcType<HeirConfig>, CompositeHeir>>>();
+    let heir = heirs.read().get(&heir_config).cloned();
 
     use_drop(|| log::debug!("HeritageConfigurationsHistoryItemContentV1Heir Dropped"));
     rsx! {
@@ -332,31 +338,69 @@ fn HeritageConfigurationsHistoryItemContentV1Heir(
                     span { class: "m-1 font-bold", "#{position}" }
                 }
             }
-            div { class: "timeline-end timeline-box flex flex-row gap-8",
-                div { class: "flex flex-col",
-                    div { class: "font-light", "Key Type" }
-                    div { class: "text-lg font-bold", "{heir_config_type}" }
+            div { class: "timeline-end timeline-box flex flex-col",
+                if let Some(heir) = heir {
+                    KnownHeir { heir }
                 }
-                div { class: "flex flex-col",
-                    div { class: "font-light", "Key Fingerprint" }
-                    div { class: "text-lg font-bold", "{heir_config_fg}" }
-                }
-                div { class: "flex flex-col",
-                    div { class: "font-light", "Locked for" }
-                    div { class: "text-lg font-bold", "{locked_for_days} days" }
-                }
-                div { class: "flex flex-col",
-                    div { class: "font-light", "Maturity Date" }
-                    div { class: "text-lg font-bold",
-                        Date {
-                            timestamp: DisplayTimestamp::from(maturity_ts).into(),
-                            display_style: DisplayTimestampStyle::DateOnly,
+                div { class: "flex flex-row gap-8",
+                    div { class: "flex flex-col",
+                        div { class: "font-light", "Key Type" }
+                        div { class: "text-lg font-bold", "{heir_config_type}" }
+                    }
+                    div { class: "flex flex-col",
+                        div { class: "font-light", "Key Fingerprint" }
+                        div { class: "text-lg font-bold", "{heir_config_fg}" }
+                    }
+                    div { class: "flex flex-col",
+                        div { class: "font-light", "Locked for" }
+                        div { class: "text-lg font-bold", "{locked_for_days} days" }
+                    }
+                    div { class: "flex flex-col",
+                        div { class: "font-light", "Maturity Date" }
+                        div { class: "text-lg font-bold",
+                            Date {
+                                timestamp: DisplayTimestamp::from(maturity_ts).into(),
+                                display_style: DisplayTimestampStyle::DateOnly,
+                            }
                         }
                     }
                 }
             }
             if !is_last {
                 hr { class: "bg-base-content" }
+            }
+        }
+    }
+}
+
+#[component]
+fn KnownHeir(heir: CompositeHeir) -> Element {
+    let CompositeHeir {
+        name,
+        db_heir,
+        service_heir,
+        ..
+    } = heir;
+
+    let badges = db_heir
+        .iter()
+        .map(|_| HeirBadgeType::Database)
+        .chain(service_heir.iter().map(|_| HeirBadgeType::Service));
+    let email = service_heir
+        .as_ref()
+        .map(|service_heir| &service_heir.main_contact.email);
+
+    rsx! {
+        div { class: "flex flex-row gap-4",
+            div {
+                span { class: "text-xl font-bold mr-2", {name} }
+                if let Some(email) = email {
+                    span { class: "text-base font-semibold", "({email})" }
+                }
+            }
+            div { class: "grow" }
+            for badge in badges {
+                Badge { badge }
             }
         }
     }

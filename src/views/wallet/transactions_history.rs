@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use std::{str::FromStr, sync::Arc};
+use std::rc::Rc;
 
 use btc_heritage_wallet::{
     bitcoin::{self, FeeRate, SignedAmount},
@@ -22,7 +22,7 @@ pub(super) fn TransactionsHistory() -> Element {
     log::debug!("TransactionsHistory Rendered");
 
     let wallet_status = use_context::<Resource<Option<WalletStatus>>>();
-    let wallet_transactions = use_context::<Resource<Arc<[TransactionSummary]>>>();
+    let wallet_transactions = use_context::<Resource<Rc<[TransactionSummary]>>>();
 
     let transaction_history_items = use_memo(move || {
         log::debug!("use_memo_transaction_history_items - start compute");
@@ -177,7 +177,7 @@ fn ConfirmationTime(confirmation_time: LoadedElement<Option<BlockTime>>) -> Elem
         if let LoadedElement::Loaded(Some(BlockTime { height, .. })) = &confirmation_time {
             RcStr::from(format!("Included in block #{height}"))
         } else {
-            RcStr::from_str("Not included yet").unwrap()
+            RcStr::from("Not included yet")
         };
 
     let timestamp = confirmation_time.map(|opt| match opt {

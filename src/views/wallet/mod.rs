@@ -1,10 +1,11 @@
+pub mod configuration;
 mod heritage_configurations_history;
 mod misc;
 mod transactions_history;
 
 use dioxus::prelude::*;
 
-use std::sync::Arc;
+use std::rc::Rc;
 
 use btc_heritage_wallet::{
     btc_heritage::bitcoincore_rpc::jsonrpc::serde_json, heritage_service_api_client::HeritageUtxo,
@@ -16,8 +17,9 @@ use crate::{
         misc::Date,
         wallet::{KeyProviderBadge, OnlineWalletBadge},
     },
-    helper_hooks,
+    helper_hooks::{self, use_memo_heirs, use_resource_database_heirs, use_resource_service_heirs},
     utils::RcStr,
+    Route,
 };
 
 #[component]
@@ -25,17 +27,26 @@ pub fn WalletWrapperLayout(wallet_name: RcStr) -> Element {
     log::debug!("WalletWrapperView Rendered");
 
     let wallet = helper_hooks::use_resource_wallet(wallet_name);
+
     let wallet_status = helper_hooks::use_resource_wallet_status(wallet);
+
     let wallet_transactions = helper_hooks::use_resource_wallet_transactions(wallet);
+
     let wallet_utxos = helper_hooks::use_resource_wallet_utxos(wallet);
+
     let wallet_heritage_configs = helper_hooks::use_resource_wallet_heritage_configs(wallet);
 
-    // Provide the wallet resources to all child that want it
+    let database_heirs = use_resource_database_heirs();
+    let service_heirs = use_resource_service_heirs();
+    let heirs = use_memo_heirs(database_heirs, service_heirs);
+
+    // Provide the wallet resources to all child that may want it
     use_context_provider(|| wallet);
     use_context_provider(|| wallet_status);
     use_context_provider(|| wallet_transactions);
     use_context_provider(|| wallet_utxos);
     use_context_provider(|| wallet_heritage_configs);
+    use_context_provider(|| heirs);
 
     use_drop(|| log::debug!("WalletWrapperView Dropped"));
     rsx! {
@@ -46,6 +57,8 @@ pub fn WalletWrapperLayout(wallet_name: RcStr) -> Element {
 #[component]
 pub fn WalletView(wallet_name: RcStr) -> Element {
     log::debug!("WalletView Rendered");
+
+    let navigator = use_navigator();
 
     let wallet = use_context::<Resource<Wallet>>();
     let wallet_status = use_context::<Resource<Option<WalletStatus>>>();
@@ -79,7 +92,14 @@ pub fn WalletView(wallet_name: RcStr) -> Element {
             },
             right: rsx! {
                 div { class: "h-full content-center",
-                    button { class: "btn btn-circle btn-outline btn-primary btn-lg p-2",
+                    button {
+                        class: "btn btn-circle btn-outline btn-primary btn-lg p-2",
+                        onclick: move |_| {
+                            navigator
+                                .push(Route::WalletConfigurationView {
+                                    wallet_name: wallet_name.clone(),
+                                });
+                        },
                         svg {
                             class: "min-h-full h-full w-full fill-current",
                             xmlns: "http://www.w3.org/2000/svg",
@@ -119,7 +139,7 @@ pub fn WalletView(wallet_name: RcStr) -> Element {
 fn UtxoList() -> Element {
     log::debug!("UtxoList Rendered");
 
-    let wallet_utxos = use_context::<Resource<Arc<[HeritageUtxo]>>>();
+    let wallet_utxos = use_context::<Resource<Rc<[HeritageUtxo]>>>();
 
     use_drop(|| log::debug!("UtxoList Dropped"));
     rsx! {
