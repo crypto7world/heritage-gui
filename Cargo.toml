@@ -3,8 +3,8 @@ name = "heritage-gui"
 version = "0.1.0-alpha"
 description = "The Heritage wallet GUI, a Bitcoin Taproot wallet managing on-chain inheritance of bitcoins"
 repository = "https://github.com/crypto7world/heritage-gui.git"
-rust-version = "1.83"
-edition = "2021"
+rust-version = "1.85"
+edition = "2024"
 authors = ["Crypto7 <john@crypto7.world>"]
 license = "MIT"
 
