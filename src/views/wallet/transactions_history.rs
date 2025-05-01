@@ -1,7 +1,5 @@
 use dioxus::prelude::*;
 
-use std::rc::Rc;
-
 use btc_heritage_wallet::{
     bitcoin::{self, FeeRate, SignedAmount},
     btc_heritage::bdk_types::BlockTime,
@@ -14,7 +12,7 @@ use crate::{
         misc::{Date, DisplayTimestamp, Tooltip},
         wallet::{BtcAmount, DisplayBtcAmount},
     },
-    utils::{amount_to_signed_string, LoadedElement, PlaceHolder, RcStr},
+    utils::{amount_to_signed_string, LoadedElement, PlaceHolder, RcStr, RcType},
 };
 
 #[component]
@@ -22,7 +20,7 @@ pub(super) fn TransactionsHistory() -> Element {
     log::debug!("TransactionsHistory Rendered");
 
     let wallet_status = use_context::<Resource<Option<WalletStatus>>>();
-    let wallet_transactions = use_context::<Resource<Rc<[TransactionSummary]>>>();
+    let wallet_transactions = use_context::<Resource<RcType<[TransactionSummary]>>>();
 
     let transaction_history_items = use_memo(move || {
         log::debug!("use_memo_transaction_history_items - start compute");

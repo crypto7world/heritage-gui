@@ -5,8 +5,6 @@ mod transactions_history;
 
 use dioxus::prelude::*;
 
-use std::rc::Rc;
-
 use btc_heritage_wallet::{
     btc_heritage::bitcoincore_rpc::jsonrpc::serde_json, heritage_service_api_client::HeritageUtxo,
     online_wallet::WalletStatus, Wallet,
@@ -18,7 +16,7 @@ use crate::{
         wallet::{KeyProviderBadge, OnlineWalletBadge},
     },
     helper_hooks::{self, use_memo_heirs, use_resource_database_heirs, use_resource_service_heirs},
-    utils::RcStr,
+    utils::{RcStr, RcType},
     Route,
 };
 
@@ -139,7 +137,7 @@ pub fn WalletView(wallet_name: RcStr) -> Element {
 fn UtxoList() -> Element {
     log::debug!("UtxoList Rendered");
 
-    let wallet_utxos = use_context::<Resource<Rc<[HeritageUtxo]>>>();
+    let wallet_utxos = use_context::<Resource<RcType<[HeritageUtxo]>>>();
 
     use_drop(|| log::debug!("UtxoList Dropped"));
     rsx! {

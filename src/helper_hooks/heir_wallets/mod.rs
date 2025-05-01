@@ -5,7 +5,7 @@ use crate::{
     utils::RcStr,
 };
 
-pub fn use_resource_heirwallet_names() -> Resource<Vec<RcStr>> {
+pub fn use_resource_heir_wallet_names() -> Resource<Vec<RcStr>> {
     let database_service = use_database_service();
     use_resource(move || async move {
         log::debug!("use_resource_heir_names - start");

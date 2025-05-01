@@ -103,7 +103,7 @@ impl<T: PlaceHolder> From<T> for LoadedElement<T> {
 }
 
 #[derive(Debug)]
-pub struct EqRcType<T>(RcType<T>);
+pub struct EqRcType<T: ?Sized>(RcType<T>);
 impl<T> Clone for EqRcType<T> {
     fn clone(&self) -> Self {
         Self(RcType::clone(&self.0))
@@ -132,9 +132,9 @@ impl<T> Deref for EqRcType<T> {
     }
 }
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct RcType<T>(Rc<T>);
+pub struct RcType<T: ?Sized>(Rc<T>);
 
-impl<T> Clone for RcType<T> {
+impl<T: ?Sized> Clone for RcType<T> {
     fn clone(&self) -> Self {
         Self(Rc::clone(&self.0))
     }
@@ -155,12 +155,23 @@ impl<T> From<T> for RcType<T> {
         Self(Rc::from(value))
     }
 }
+impl<T> From<Vec<T>> for RcType<[T]> {
+    fn from(value: Vec<T>) -> Self {
+        Self(Rc::from(value))
+    }
+}
+
+impl<E> FromIterator<E> for RcType<[E]> {
+    fn from_iter<T: IntoIterator<Item = E>>(iter: T) -> Self {
+        Self(Rc::from_iter(iter))
+    }
+}
 impl<T> From<RcType<T>> for Rc<T> {
     fn from(value: RcType<T>) -> Self {
         value.0
     }
 }
-impl<T> Deref for RcType<T> {
+impl<T: ?Sized> Deref for RcType<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {

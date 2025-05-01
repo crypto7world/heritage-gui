@@ -1,14 +1,15 @@
-use std::rc::Rc;
-
 use dioxus::prelude::*;
 
 use btc_heritage_wallet::{btc_heritage::HeritageConfig, DatabaseItem, OnlineWallet, Wallet};
 
-use crate::{state_management, utils::wait_resource};
+use crate::{
+    state_management,
+    utils::{wait_resource, RcType},
+};
 
 pub fn use_resource_wallet_heritage_configs(
     wallet: Resource<Wallet>,
-) -> Resource<Rc<[Rc<HeritageConfig>]>> {
+) -> Resource<RcType<[RcType<HeritageConfig>]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_heritage_configs - start");
 
@@ -34,7 +35,7 @@ pub fn use_resource_wallet_heritage_configs(
                 })
                 .unwrap_or_default()
                 .into_iter()
-                .map(Rc::new)
+                .map(RcType::new)
                 .collect()
         } else {
             unreachable!("wait_resource barrier ensures we can't go there")

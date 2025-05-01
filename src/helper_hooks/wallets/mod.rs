@@ -1,8 +1,14 @@
+mod account_xpubs;
+mod addresses;
+mod backup;
 mod heritage_configs;
 mod status;
 mod transactions;
 mod utxos;
 
+pub use account_xpubs::*;
+pub use addresses::*;
+pub use backup::*;
 use btc_heritage_wallet::{heritage_service_api_client::HeritageWalletMeta, AnyOnlineWallet};
 pub use heritage_configs::*;
 pub use status::*;

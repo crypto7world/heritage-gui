@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use std::{collections::HashMap, ops::Deref, rc::Rc};
+use std::{collections::HashMap, ops::Deref};
 
 use btc_heritage_wallet::{
     bitcoin::SignedAmount,
@@ -24,8 +24,8 @@ use crate::{
 pub(super) fn HeritageConfigurationsHistory() -> Element {
     log::debug!("HeritageConfigurationsHistory Rendered");
 
-    let wallet_heritage_configs = use_context::<Resource<Rc<[Rc<HeritageConfig>]>>>();
-    let wallet_utxos = use_context::<Resource<Rc<[HeritageUtxo]>>>();
+    let wallet_heritage_configs = use_context::<Resource<RcType<[RcType<HeritageConfig>]>>>();
+    let wallet_utxos = use_context::<Resource<RcType<[HeritageUtxo]>>>();
 
     let balance_by_heritage_config = use_memo(move || {
         log::debug!("use_memo_utxo_by_heritage_config - start compute");
@@ -150,7 +150,7 @@ impl From<HeritageConfigurationExpirationParams> for HeritageConfigurationExpira
 #[component]
 fn HeritageConfigurationsHistoryItem(
     is_current: bool,
-    heritage_configuration: Option<Rc<HeritageConfig>>,
+    heritage_configuration: Option<RcType<HeritageConfig>>,
     associated_balance: LoadedElement<SignedAmount>,
 ) -> Element {
     log::debug!("HeritageConfigurationsHistoryItem Rendered");
@@ -268,7 +268,7 @@ pub fn ExpirationStatusBadge(
 
 #[component]
 fn HeritageConfigurationsHistoryItemContentV1(
-    heritage_configuration: Rc<HeritageConfig>,
+    heritage_configuration: RcType<HeritageConfig>,
 ) -> Element {
     log::debug!("HeritageConfigurationsHistoryItemContentV1 Rendered");
 

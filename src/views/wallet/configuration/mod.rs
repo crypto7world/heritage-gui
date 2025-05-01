@@ -1,4 +1,7 @@
+use account_xpubs::AccountXPubConfig;
 use dioxus::prelude::*;
+
+mod account_xpubs;
 
 use btc_heritage_wallet::Wallet;
 
@@ -41,6 +44,7 @@ pub fn WalletConfigurationView(wallet_name: RcStr) -> Element {
                 }
             },
             div { "Now I need content...." }
+            AccountXPubConfig {}
         }
     }
 }

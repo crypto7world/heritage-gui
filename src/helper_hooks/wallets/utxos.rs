@@ -1,14 +1,15 @@
 use dioxus::prelude::*;
 
-use std::rc::Rc;
-
 use btc_heritage_wallet::{
     heritage_service_api_client::HeritageUtxo, DatabaseItem, OnlineWallet, Wallet,
 };
 
-use crate::{state_management, utils::wait_resource};
+use crate::{
+    state_management,
+    utils::{wait_resource, RcType},
+};
 
-pub fn use_resource_wallet_utxos(wallet: Resource<Wallet>) -> Resource<Rc<[HeritageUtxo]>> {
+pub fn use_resource_wallet_utxos(wallet: Resource<Wallet>) -> Resource<RcType<[HeritageUtxo]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_utxos - start");
 

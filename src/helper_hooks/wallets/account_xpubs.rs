@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use btc_heritage_wallet::{
-    heritage_service_api_client::TransactionSummary, DatabaseItem, OnlineWallet, Wallet,
+    heritage_service_api_client::AccountXPubWithStatus, DatabaseItem, OnlineWallet, Wallet,
 };
 
 use crate::{
@@ -9,28 +9,29 @@ use crate::{
     utils::{wait_resource, RcType},
 };
 
-pub fn use_resource_wallet_transactions(
+/// Resource hook for fetching account extended public keys for a wallet
+pub fn use_resource_wallet_account_xpubs(
     wallet: Resource<Wallet>,
-) -> Resource<RcType<[TransactionSummary]>> {
+) -> Resource<RcType<[AccountXPubWithStatus]>> {
     use_resource(move || async move {
-        log::debug!("use_resource_wallet_transactions - start");
+        log::debug!("use_resource_wallet_account_xpubs - start");
 
         // Subscribe to the service connection
         let _ = *state_management::CONNECTED_USER.read();
 
-        log::debug!("use_resource_wallet_transactions - waiting use_resource_wallet...");
+        log::debug!("use_resource_wallet_account_xpubs - waiting use_resource_wallet...");
         // Wait for wallet to finish
         wait_resource(wallet).await;
-        log::debug!("use_resource_wallet_transactions - use_resource_wallet acquired");
+        log::debug!("use_resource_wallet_account_xpubs - use_resource_wallet acquired");
 
-        let wallet_txs = if let Some(ref wallet) = *wallet.read() {
+        let account_xpubs = if let Some(ref wallet) = *wallet.read() {
             let wallet_name = wallet.name().to_owned();
             wallet
-                .list_transactions()
+                .list_account_xpubs()
                 .await
                 .map_err(|e| {
                     log::error!(
-                        "Error retrieving the wallet transactions of wallet {}: {e}",
+                        "Error retrieving the account XPubs of wallet {}: {e}",
                         wallet_name
                     );
                     ()
@@ -40,7 +41,7 @@ pub fn use_resource_wallet_transactions(
         } else {
             unreachable!("wait_resource barrier ensures we can't go there")
         };
-        log::debug!("use_resource_wallet_transactions - loaded");
-        wallet_txs
+        log::debug!("use_resource_wallet_account_xpubs - loaded");
+        account_xpubs
     })
 }
