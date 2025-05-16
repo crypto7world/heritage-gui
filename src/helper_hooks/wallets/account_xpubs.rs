@@ -6,13 +6,13 @@ use btc_heritage_wallet::{
 
 use crate::{
     state_management,
-    utils::{wait_resource, RcType},
+    utils::{wait_resource, ArcType},
 };
 
 /// Resource hook for fetching account extended public keys for a wallet
 pub fn use_resource_wallet_account_xpubs(
     wallet: Resource<Wallet>,
-) -> Resource<RcType<[AccountXPubWithStatus]>> {
+) -> Resource<ArcType<[AccountXPubWithStatus]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_account_xpubs - start");
 
@@ -42,6 +42,9 @@ pub fn use_resource_wallet_account_xpubs(
             unreachable!("wait_resource barrier ensures we can't go there")
         };
         log::debug!("use_resource_wallet_account_xpubs - loaded");
+
+        // tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
         account_xpubs
     })
 }

@@ -5,10 +5,10 @@ mod account_xpubs;
 
 use btc_heritage_wallet::Wallet;
 
-use crate::{helper_hooks, utils::RcStr, Route};
+use crate::{helper_hooks, utils::ArcStr, Route};
 
 #[component]
-pub fn WalletConfigurationView(wallet_name: RcStr) -> Element {
+pub fn WalletConfigurationView(wallet_name: ArcStr) -> Element {
     log::debug!("WalletConfigurationView Rendered");
 
     let navigator = use_navigator();

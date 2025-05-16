@@ -1,34 +1,19 @@
 use dioxus::prelude::*;
 
 use btc_heritage_wallet::{
-    bitcoin::SignedAmount, btc_heritage::HeritageWalletBalance, online_wallet::WalletStatus,
-    BoundFingerprint, DatabaseItem, OnlineWallet, Wallet,
+    online_wallet::WalletStatus, AnyKeyProvider, AnyOnlineWallet, BoundFingerprint, DatabaseItem,
+    OnlineWallet, Wallet,
 };
 
 use crate::{
-    components::{misc::DisplayTimestamp, wallet::DisplayBtcAmount},
-    state_management::{self, use_database_service},
-    utils::{wait_resource, LoadedElement, RcStr},
+    components::loaded::badge::{ExternalDependencyStatus, KeyProviderType, OnlineWalletType},
+    state_management,
+    utils::wait_resource,
 };
 
-pub fn use_resource_wallet(name: RcStr) -> Resource<Wallet> {
-    let database_service = use_database_service();
-    use_resource(move || {
-        let name = name.clone();
-        async move {
-            log::debug!("use_resource_wallet - start");
-            let wallet = state_management::get_wallet(database_service, name)
-                .await
-                .expect(
-                    "wallet should exist and I have nothing smart to do with this error anyway",
-                );
-            log::debug!("use_resource_wallet - loaded");
-            wallet
-        }
-    })
-}
-
-pub fn use_resource_wallet_status(wallet: Resource<Wallet>) -> Resource<Option<WalletStatus>> {
+pub fn use_resource_wallet_status(
+    wallet: Resource<Wallet>,
+) -> Resource<Result<WalletStatus, String>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_status - start");
 
@@ -40,24 +25,22 @@ pub fn use_resource_wallet_status(wallet: Resource<Wallet>) -> Resource<Option<W
         wait_resource(wallet).await;
         log::debug!("use_resource_wallet_status - use_resource_wallet acquired");
 
-        // tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-
         let wallet_status = if let Some(ref wallet) = *wallet.read() {
-            wallet
-                .get_wallet_status()
-                .await
-                .map_err(|e| {
-                    log::error!(
-                        "Error retrieving the wallet status of wallet {}: {e}",
-                        wallet.name()
-                    );
-                    ()
-                })
-                .ok()
+            wallet.get_wallet_status().await.map_err(|e| {
+                log::error!(
+                    "Error retrieving the wallet status of wallet {}: {e}",
+                    wallet.name()
+                );
+                e.to_string()
+            })
         } else {
             unreachable!("wait_resource barrier ensures we can't go there")
         };
+
         log::debug!("use_resource_wallet_status - loaded");
+
+        // tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
         wallet_status
     })
 }
@@ -81,58 +64,51 @@ pub fn use_memo_fingerprint(wallet: Resource<Wallet>) -> Memo<String> {
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Balances {
-    pub balance: LoadedElement<DisplayBtcAmount>,
-    pub cur_balance: LoadedElement<DisplayBtcAmount>,
-    pub obs_balance: LoadedElement<DisplayBtcAmount>,
-}
-
-impl From<&HeritageWalletBalance> for Balances {
-    fn from(value: &HeritageWalletBalance) -> Self {
-        let balance = SignedAmount::from_sat(value.total_balance().get_total() as i64);
-        let cur_balance = SignedAmount::from_sat(value.uptodate_balance().get_total() as i64);
-        let obs_balance = SignedAmount::from_sat(value.obsolete_balance().get_total() as i64);
-        Balances {
-            balance: LoadedElement::Loaded(balance.into()),
-            cur_balance: LoadedElement::Loaded(cur_balance.into()),
-            obs_balance: LoadedElement::Loaded(obs_balance.into()),
-        }
-    }
-}
-impl From<Option<&WalletStatus>> for Balances {
-    fn from(value: Option<&WalletStatus>) -> Self {
-        value.map(|ws| Self::from(&ws.balance)).unwrap_or_default()
-    }
-}
-
-pub fn use_memo_display_balances(wallet_status: Resource<Option<WalletStatus>>) -> Memo<Balances> {
+pub fn use_memo_online_status(
+    wallet: Resource<Wallet>,
+    wallet_status: Resource<Result<WalletStatus, String>>,
+) -> Memo<Option<(OnlineWalletType, ExternalDependencyStatus)>> {
     use_memo(move || {
-        log::debug!("use_memo_display_balances - start compute");
-        let balances = match &*wallet_status.read() {
-            Some(ows) => Balances::from(ows.as_ref()),
-            None => Balances {
-                balance: LoadedElement::Loading,
-                cur_balance: LoadedElement::Loading,
-                obs_balance: LoadedElement::Loading,
-            },
+        log::debug!("use_memo_online_status - start compute");
+        let result = match (&*wallet.read(), &*wallet_status.read()) {
+            (Some(wallet), Some(wallet_status)) => Some((
+                match wallet.online_wallet() {
+                    AnyOnlineWallet::None => OnlineWalletType::None,
+                    AnyOnlineWallet::Service(_) => OnlineWalletType::Service,
+                    AnyOnlineWallet::Local(_) => OnlineWalletType::Local,
+                },
+                match wallet_status {
+                    Ok(_) => ExternalDependencyStatus::Available,
+                    Err(_) => ExternalDependencyStatus::Unavailable,
+                },
+            )),
+            _ => None,
         };
-        log::debug!("use_memo_display_balances - finish compute");
-        balances
+        log::debug!("use_memo_online_status - finish compute");
+        result
     })
 }
-
-pub fn use_memo_last_sync(
-    wallet_status: Resource<Option<WalletStatus>>,
-) -> Memo<LoadedElement<DisplayTimestamp>> {
+pub fn use_memo_keyprovider_status(
+    wallet: Resource<Wallet>,
+    wallet_status: Resource<Result<WalletStatus, String>>,
+) -> Memo<Option<(KeyProviderType, ExternalDependencyStatus)>> {
     use_memo(move || {
-        log::debug!("use_memo_last_sync - start compute");
-        let last_sync = match &*wallet_status.read() {
-            Some(Some(ws)) => LoadedElement::Loaded(DisplayTimestamp::Ts(ws.last_sync_ts)),
-            Some(None) => LoadedElement::Loaded(DisplayTimestamp::None),
-            None => LoadedElement::Loading,
+        log::debug!("use_memo_keyprovider_status - start compute");
+        let result = match (&*wallet.read(), &*wallet_status.read()) {
+            (Some(wallet), Some(wallet_status)) => Some((
+                match wallet.key_provider() {
+                    AnyKeyProvider::None => KeyProviderType::None,
+                    AnyKeyProvider::LocalKey(_) => KeyProviderType::LocalKey,
+                    AnyKeyProvider::Ledger(_) => KeyProviderType::Ledger,
+                },
+                match wallet_status {
+                    Ok(_) => ExternalDependencyStatus::Available,
+                    Err(_) => ExternalDependencyStatus::Unavailable,
+                },
+            )),
+            _ => None,
         };
-        log::debug!("use_memo_last_sync - finish compute");
-        last_sync
+        log::debug!("use_memo_keyprovider_status - finish compute");
+        result
     })
 }

@@ -1,9 +1,6 @@
-use std::{convert::Infallible, ops::Deref, rc::Rc, str::FromStr};
+use std::{convert::Infallible, ops::Deref, str::FromStr, sync::Arc};
 
-use btc_heritage_wallet::{
-    bitcoin::{self, Amount, Denomination, SignedAmount},
-    btc_heritage::bdk_types::BlockTime,
-};
+use btc_heritage_wallet::bitcoin::{Amount, Denomination, SignedAmount};
 
 pub fn log_error<E: core::fmt::Display>(error: E) -> String {
     log::error!("{error}");
@@ -44,87 +41,29 @@ pub async fn wait_resource<T: 'static>(resource: dioxus::hooks::Resource<T>) {
     }
 }
 
-pub trait PlaceHolder {
-    fn place_holder() -> Self;
-}
-impl PlaceHolder for SignedAmount {
-    fn place_holder() -> Self {
-        SignedAmount::from_btc(12345.0).expect("12345.0 cannot fail")
-    }
-}
-impl PlaceHolder for bitcoin::Txid {
-    fn place_holder() -> Self {
-        bitcoin::Txid::from_str("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456")
-            .expect("is a valid txid, cannot fail")
-    }
-}
-impl PlaceHolder for Option<BlockTime> {
-    fn place_holder() -> Self {
-        BlockTime::new(Some(0), Some(0))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum LoadedElement<T: PlaceHolder> {
-    Loaded(T),
-    Loading,
-}
-impl<T: PlaceHolder + Copy> Copy for LoadedElement<T> {}
-
-impl<T: PlaceHolder> LoadedElement<T> {
-    pub fn map<U: PlaceHolder, F>(self, f: F) -> LoadedElement<U>
-    where
-        F: FnOnce(T) -> U,
-    {
-        match self {
-            LoadedElement::Loaded(e) => LoadedElement::Loaded(f(e)),
-            LoadedElement::Loading => LoadedElement::Loading,
-        }
-    }
-    /// Consume the [LoadedElement] and return a tuple (is_placeholder, value) of type [(bool, T)]
-    pub fn extract(self) -> (bool, T) {
-        match self {
-            LoadedElement::Loaded(value) => (false, value),
-            LoadedElement::Loading => (true, T::place_holder()),
-        }
-    }
-}
-
-impl<T: PlaceHolder + Default> Default for LoadedElement<T> {
-    fn default() -> Self {
-        LoadedElement::Loaded(T::default())
-    }
-}
-
-impl<T: PlaceHolder> From<T> for LoadedElement<T> {
-    fn from(value: T) -> Self {
-        LoadedElement::Loaded(value)
-    }
-}
-
 #[derive(Debug)]
-pub struct EqRcType<T: ?Sized>(RcType<T>);
-impl<T> Clone for EqRcType<T> {
+pub struct EqArcType<T: ?Sized>(ArcType<T>);
+impl<T> Clone for EqArcType<T> {
     fn clone(&self) -> Self {
-        Self(RcType::clone(&self.0))
+        Self(ArcType::clone(&self.0))
     }
 }
-impl<T> PartialEq for EqRcType<T> {
+impl<T> PartialEq for EqArcType<T> {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0 .0, &other.0 .0)
+        Arc::ptr_eq(&self.0 .0, &other.0 .0)
     }
 }
-impl<T> From<RcType<T>> for EqRcType<T> {
-    fn from(value: RcType<T>) -> Self {
-        EqRcType(value)
+impl<T> From<ArcType<T>> for EqArcType<T> {
+    fn from(value: ArcType<T>) -> Self {
+        EqArcType(value)
     }
 }
-impl<T> From<EqRcType<T>> for RcType<T> {
-    fn from(value: EqRcType<T>) -> Self {
+impl<T> From<EqArcType<T>> for ArcType<T> {
+    fn from(value: EqArcType<T>) -> Self {
         value.0
     }
 }
-impl<T> Deref for EqRcType<T> {
+impl<T> Deref for EqArcType<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -132,102 +71,78 @@ impl<T> Deref for EqRcType<T> {
     }
 }
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct RcType<T: ?Sized>(Rc<T>);
+pub struct ArcType<T: ?Sized>(Arc<T>);
 
-impl<T: ?Sized> Clone for RcType<T> {
+impl<T: ?Sized> Clone for ArcType<T> {
     fn clone(&self) -> Self {
-        Self(Rc::clone(&self.0))
+        Self(Arc::clone(&self.0))
     }
 }
 
-impl<T: core::fmt::Display> core::fmt::Display for RcType<T> {
+impl<T: ?Sized + core::fmt::Display> core::fmt::Display for ArcType<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
     }
 }
-impl<T> RcType<T> {
+impl<T> ArcType<T> {
     pub fn new(value: T) -> Self {
-        Self(Rc::new(value))
+        Self(Arc::new(value))
     }
 }
-impl<T> From<T> for RcType<T> {
+impl<T> From<T> for ArcType<T> {
     fn from(value: T) -> Self {
-        Self(Rc::from(value))
+        Self(Arc::from(value))
     }
 }
-impl<T> From<Vec<T>> for RcType<[T]> {
-    fn from(value: Vec<T>) -> Self {
-        Self(Rc::from(value))
+impl<T, I: IntoIterator<Item = T>> From<I> for ArcType<[T]> {
+    fn from(value: I) -> Self {
+        Self(Arc::from_iter(value))
+    }
+}
+impl<T> FromIterator<T> for ArcType<[T]> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        Self(Arc::from_iter(iter))
     }
 }
 
-impl<E> FromIterator<E> for RcType<[E]> {
-    fn from_iter<T: IntoIterator<Item = E>>(iter: T) -> Self {
-        Self(Rc::from_iter(iter))
-    }
-}
-impl<T> From<RcType<T>> for Rc<T> {
-    fn from(value: RcType<T>) -> Self {
+impl<T> From<ArcType<T>> for Arc<T> {
+    fn from(value: ArcType<T>) -> Self {
         value.0
     }
 }
-impl<T: ?Sized> Deref for RcType<T> {
+impl<T: ?Sized> Deref for ArcType<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         self.0.deref()
     }
 }
+impl<T: ?Sized> AsRef<T> for ArcType<T> {
+    fn as_ref(&self) -> &T {
+        self.0.as_ref()
+    }
+}
 
-#[derive(Debug, PartialEq)]
-pub struct RcStr(Rc<str>);
-impl core::fmt::Display for RcStr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-impl Clone for RcStr {
-    fn clone(&self) -> Self {
-        Self(Rc::clone(&self.0))
-    }
-}
-impl FromStr for RcStr {
+pub type ArcStr = ArcType<str>;
+impl FromStr for ArcType<str> {
     type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(RcStr(Rc::from(s)))
+        Ok(ArcType(Arc::from(s)))
     }
 }
-
-impl From<&str> for RcStr {
-    fn from(value: &str) -> Self {
-        Self::from_str(value).expect("infaillible")
-    }
-}
-impl From<RcStr> for Rc<str> {
-    fn from(value: RcStr) -> Self {
-        value.0
-    }
-}
-impl From<Rc<str>> for RcStr {
-    fn from(value: Rc<str>) -> Self {
-        RcStr(value)
-    }
-}
-impl From<String> for RcStr {
+impl From<String> for ArcType<str> {
     fn from(value: String) -> Self {
-        Self::from(value.as_str())
+        Self::from_str(value.as_str()).unwrap()
     }
 }
-impl From<&String> for RcStr {
+impl From<&String> for ArcType<str> {
     fn from(value: &String) -> Self {
-        Self::from(value.as_str())
+        Self::from_str(value.as_str()).unwrap()
     }
 }
-impl Deref for RcStr {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        self.0.deref()
+impl From<&str> for ArcType<str> {
+    fn from(value: &str) -> Self {
+        Self::from_str(value).unwrap()
     }
 }

@@ -12,7 +12,7 @@ use btc_heritage_wallet::{
     AnyKeyProvider, AnyOnlineWallet, Heir, Wallet,
 };
 
-use crate::utils::{log_error, RcStr, RcType};
+use crate::utils::{log_error, ArcStr, ArcType};
 use database::{DatabaseCommand, DatabaseItemCommand};
 use service::ServiceClientCommand;
 
@@ -87,7 +87,7 @@ pub async fn heritage_service_client(
 
 pub async fn list_wallet_names(
     database_service: Coroutine<DatabaseCommand>,
-) -> Result<Vec<RcStr>, String> {
+) -> Result<Vec<ArcStr>, String> {
     log::debug!("list_wallet_names - start");
     let (result, rx) = oneshot::channel();
     database_service.send(DatabaseCommand::Wallet(
@@ -99,7 +99,7 @@ pub async fn list_wallet_names(
 }
 pub async fn list_wallets(
     database_service: Coroutine<DatabaseCommand>,
-) -> Result<Vec<RcType<Wallet>>, String> {
+) -> Result<Vec<ArcType<Wallet>>, String> {
     log::debug!("list_wallets - start");
     let (result, rx) = oneshot::channel();
     database_service.send(DatabaseCommand::Wallet(
@@ -112,7 +112,7 @@ pub async fn list_wallets(
 
 pub async fn list_heir_names(
     database_service: Coroutine<DatabaseCommand>,
-) -> Result<Vec<RcStr>, String> {
+) -> Result<Vec<ArcStr>, String> {
     log::debug!("list_heir_names - start");
     let (result, rx) = oneshot::channel();
     database_service.send(DatabaseCommand::Heir(
@@ -124,7 +124,7 @@ pub async fn list_heir_names(
 }
 pub async fn list_heirs(
     database_service: Coroutine<DatabaseCommand>,
-) -> Result<Vec<RcType<Heir>>, String> {
+) -> Result<Vec<ArcType<Heir>>, String> {
     log::debug!("list_heirs - start");
     let (result, rx) = oneshot::channel();
     database_service.send(DatabaseCommand::Heir(
@@ -137,7 +137,7 @@ pub async fn list_heirs(
 
 pub async fn list_heir_wallet_names(
     database_service: Coroutine<DatabaseCommand>,
-) -> Result<Vec<RcStr>, String> {
+) -> Result<Vec<ArcStr>, String> {
     log::debug!("list_heir_wallet_names - start");
     let (result, rx) = oneshot::channel();
     database_service.send(DatabaseCommand::HeirWallet(
@@ -150,7 +150,7 @@ pub async fn list_heir_wallet_names(
 
 pub async fn get_wallet(
     database_service: Coroutine<DatabaseCommand>,
-    name: RcStr,
+    name: ArcStr,
 ) -> Result<Wallet, String> {
     log::debug!("get_wallet({name}) - start");
     let service_client_service = use_coroutine_handle::<ServiceClientCommand>();

@@ -1,2 +1,2 @@
+pub mod loaded;
 pub mod misc;
-pub mod wallet;

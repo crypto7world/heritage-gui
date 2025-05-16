@@ -3,12 +3,17 @@ use dioxus::prelude::*;
 use btc_heritage_wallet::heritage_service_api_client::HeritageWalletMeta;
 
 use crate::{
-    components::{
-        misc::{Badge, Date, DisplayTimestamp, WalletBadgeType},
-        wallet::{BtcAmount, KeyProviderBadge, OnlineWalletBadge},
+    components::loaded::{
+        badge::{
+            ExternalDependencyStatus, KeyProviderType, OnlineWalletType, UIKeyProviderBadge,
+            UIOnlineWalletBadge,
+        },
+        balance::UIBalanceSummary,
+        timestamp::LastSyncSpan,
+        LoadedComponent, RefInto,
     },
-    helper_hooks,
-    utils::{EqRcType, LoadedElement, RcStr, RcType},
+    helper_hooks::{self, use_memo_keyprovider_status, use_memo_online_status},
+    utils::{ArcStr, ArcType, EqArcType},
     Route,
 };
 
@@ -57,7 +62,7 @@ fn WalletList() -> Element {
 }
 
 #[component]
-fn WalletItem(wallet_name: RcStr) -> Element {
+fn WalletItem(wallet_name: ArcStr) -> Element {
     log::debug!("WalletItem Rendered");
 
     let navigator = use_navigator();
@@ -65,8 +70,12 @@ fn WalletItem(wallet_name: RcStr) -> Element {
     let wallet = helper_hooks::use_resource_wallet(wallet_name.clone());
     let wallet_status = helper_hooks::use_resource_wallet_status(wallet);
     let fingerprint = helper_hooks::use_memo_fingerprint(wallet);
-    let last_synced = helper_hooks::use_memo_last_sync(wallet_status);
-    let balances = helper_hooks::use_memo_display_balances(wallet_status);
+    // let last_synced = helper_hooks::use_memo_last_sync(wallet_status);
+    // let balances = helper_hooks::use_memo_display_balances(wallet_status);
+    //
+
+    let keyprovider_status = use_memo_keyprovider_status(wallet, wallet_status);
+    let online_status = use_memo_online_status(wallet, wallet_status);
 
     use_drop(|| log::debug!("WalletItem Dropped"));
 
@@ -84,21 +93,22 @@ fn WalletItem(wallet_name: RcStr) -> Element {
                     div { class: "card-title text-3xl font-black", "{wallet_name}" }
                     div { class: "text-sm font-light", "{fingerprint}" }
                 }
+
                 div { class: "grow" }
 
-                WalletItemBalance { balances: balances() }
+                LoadedComponent::<UIBalanceSummary> { input: wallet_status.into() }
                 div { class: "text-sm font-light text-left",
                     "Last Sync: "
                     span { class: "font-semibold",
-                        Date { timestamp: last_synced() }
+                        LoadedComponent::<LastSyncSpan> { input: wallet_status.into() }
                     }
-                
                 }
 
                 div { class: "grow" }
+
                 div { class: "mx-auto grid grid-cols-2 gap-6",
-                    KeyProviderBadge { wallet }
-                    OnlineWalletBadge { wallet, wallet_status }
+                    LoadedComponent::<UIKeyProviderBadge> { input: keyprovider_status.into() }
+                    LoadedComponent::<UIOnlineWalletBadge> { input: online_status.into() }
                 }
             
             }
@@ -107,27 +117,15 @@ fn WalletItem(wallet_name: RcStr) -> Element {
 }
 
 #[component]
-fn ServiceOnlyWalletItem(wallet_meta: EqRcType<HeritageWalletMeta>) -> Element {
+fn ServiceOnlyWalletItem(wallet_meta: EqArcType<HeritageWalletMeta>) -> Element {
     log::debug!("ServiceOnlyWalletItem Rendered");
 
-    let wallet_meta: RcType<HeritageWalletMeta> = wallet_meta.into();
+    let wallet_meta: ArcType<HeritageWalletMeta> = wallet_meta.into();
     let wallet_name = wallet_meta.name.as_str();
     let fingerprint = wallet_meta
         .fingerprint
         .map(|f| f.to_string())
         .unwrap_or_else(|| "-".to_owned());
-
-    let balances = wallet_meta
-        .balance
-        .as_ref()
-        .map(helper_hooks::Balances::from)
-        .unwrap_or_default();
-
-    let last_synced = LoadedElement::Loaded(if wallet_meta.last_sync_ts != 0 {
-        wallet_meta.last_sync_ts.into()
-    } else {
-        DisplayTimestamp::Never
-    });
 
     use_drop(|| log::debug!("ServiceOnlyWalletItem Dropped"));
 
@@ -141,55 +139,24 @@ fn ServiceOnlyWalletItem(wallet_meta: EqRcType<HeritageWalletMeta>) -> Element {
                     }
                     div { class: "grow" }
 
-                    WalletItemBalance { balances }
-
+                    LoadedComponent::<UIBalanceSummary> { input: wallet_meta.clone().into() }
                     div { class: "text-sm font-light text-left",
                         "Last Sync: "
                         span { class: "font-semibold",
-                            Date { timestamp: last_synced }
+                            LoadedComponent::<LastSyncSpan> { input: wallet_meta.into() }
                         }
-                    
                     }
 
                     div { class: "grow" }
+
                     div { class: "mx-auto grid grid-cols-2 gap-6",
-                        Badge { badge: WalletBadgeType::WatchOnly }
-                        Badge { badge: WalletBadgeType::OnlineServiceOnline }
+                        LoadedComponent::<UIKeyProviderBadge> { input: (KeyProviderType::None, ExternalDependencyStatus::Available).ref_into() }
+                        LoadedComponent::<UIOnlineWalletBadge> { input: (OnlineWalletType::Service, ExternalDependencyStatus::Available).ref_into() }
                     }
                 }
             }
             div { class: "text-3xl text-secondary font-black absolute top-0 left-0 h-full w-full text-center content-center -rotate-45",
                 "Only on Service"
-            }
-        }
-    }
-}
-
-#[component]
-fn WalletItemBalance(balances: helper_hooks::Balances) -> Element {
-    let helper_hooks::Balances {
-        balance,
-        cur_balance,
-        obs_balance,
-    } = balances;
-
-    rsx! {
-        div { class: "text-base", "Balance" }
-        div {
-            div { class: "text-3xl font-black",
-                BtcAmount { amount: balance }
-            }
-            div { class: "text-nowrap font-light text-sm",
-                "Current: "
-                span { class: "font-bold",
-                    BtcAmount { amount: cur_balance }
-                }
-            }
-            div { class: "text-nowrap font-light text-sm",
-                "Obsolete: "
-                span { class: "font-bold",
-                    BtcAmount { amount: obs_balance }
-                }
             }
         }
     }

@@ -6,7 +6,7 @@ mod views;
 
 use dioxus::prelude::*;
 
-use utils::RcStr;
+use utils::ArcStr;
 use views::{
     heir_list::HeirListView,
     home::Home,
@@ -28,9 +28,9 @@ pub enum Route {
             #[nest("/:wallet_name")]
             #[layout(WalletWrapperLayout)]
                 #[route("/")]
-                WalletView{ wallet_name: RcStr },
+                WalletView{ wallet_name: ArcStr },
                 #[route("/configuration")]
-                WalletConfigurationView{ wallet_name: RcStr },
+                WalletConfigurationView{ wallet_name: ArcStr },
             #[end_layout]
             #[end_nest]
         #[end_nest]

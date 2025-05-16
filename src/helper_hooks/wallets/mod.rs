@@ -9,7 +9,9 @@ mod utxos;
 pub use account_xpubs::*;
 pub use addresses::*;
 pub use backup::*;
-use btc_heritage_wallet::{heritage_service_api_client::HeritageWalletMeta, AnyOnlineWallet};
+use btc_heritage_wallet::{
+    heritage_service_api_client::HeritageWalletMeta, AnyOnlineWallet, Wallet,
+};
 pub use heritage_configs::*;
 pub use status::*;
 pub use transactions::*;
@@ -21,10 +23,10 @@ use std::collections::HashSet;
 
 use crate::{
     state_management::{self, use_database_service, use_service_client_service},
-    utils::{RcStr, RcType},
+    utils::{ArcStr, ArcType},
 };
 
-pub fn use_resource_wallet_names() -> Resource<Vec<RcStr>> {
+pub fn use_resource_wallet_names() -> Resource<Vec<ArcStr>> {
     let database_service = use_database_service();
     use_resource(move || async move {
         log::debug!("use_resource_wallet_names - start");
@@ -36,7 +38,24 @@ pub fn use_resource_wallet_names() -> Resource<Vec<RcStr>> {
     })
 }
 
-pub fn use_resource_service_only_wallets() -> Resource<Vec<RcType<HeritageWalletMeta>>> {
+pub fn use_resource_wallet(name: ArcStr) -> Resource<Wallet> {
+    let database_service = use_database_service();
+    use_resource(move || {
+        let name = name.clone();
+        async move {
+            log::debug!("use_resource_wallet - start");
+            let wallet = state_management::get_wallet(database_service, name)
+                .await
+                .expect(
+                    "wallet should exist and I have nothing smart to do with this error anyway",
+                );
+            log::debug!("use_resource_wallet - loaded");
+            wallet
+        }
+    })
+}
+
+pub fn use_resource_service_only_wallets() -> Resource<Vec<ArcType<HeritageWalletMeta>>> {
     let database_service = use_database_service();
     let service_client_service = use_service_client_service();
     use_resource(move || async move {

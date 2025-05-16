@@ -1,43 +1,113 @@
 use dioxus::prelude::*;
 
 use btc_heritage_wallet::{
-    bitcoin::{self, FeeRate, SignedAmount},
-    btc_heritage::bdk_types::BlockTime,
-    heritage_service_api_client::TransactionSummary,
-    online_wallet::WalletStatus,
+    bitcoin::SignedAmount, btc_heritage::bdk_types::BlockTime,
+    heritage_service_api_client::TransactionSummary, online_wallet::WalletStatus,
 };
 
 use crate::{
     components::{
-        misc::{Date, DisplayTimestamp, Tooltip},
-        wallet::{BtcAmount, DisplayBtcAmount},
+        loaded::{
+            balance::UIBtcAmount, timestamp::UITimestamp, ComponentMapper, LoadedComponent,
+            LoadedElement,
+        },
+        misc::Tooltip,
     },
-    utils::{amount_to_signed_string, LoadedElement, PlaceHolder, RcStr, RcType},
+    utils::{amount_to_signed_string, ArcStr, ArcType},
 };
+
+#[derive(Debug, Clone, PartialEq)]
+struct UIBlockTime(Option<BlockTime>);
+impl LoadedElement for UIBlockTime {
+    #[inline(always)]
+    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+        let tooltip_text = if let Some(BlockTime { height, .. }) = &self.0 {
+            ArcStr::from(format!("Included in block #{height}"))
+        } else {
+            ArcStr::from("Not included yet")
+        };
+
+        let timestamp = match self.0 {
+            Some(BlockTime { timestamp, .. }) => UITimestamp::new_full(timestamp),
+            None => UITimestamp::none(),
+        };
+
+        rsx! {
+            Tooltip { tooltip_text,
+                LoadedComponent { input: mapper.map(timestamp) }
+            }
+        }
+    }
+    fn place_holder() -> Self {
+        Self(None)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct UITransactionsHistoryRow {
+    confirmation_time: UIBlockTime,
+    txid: ArcStr,
+    amount_tt: ArcStr,
+    amount: UIBtcAmount,
+    balance_after: Option<UIBtcAmount>,
+}
+impl LoadedElement for UITransactionsHistoryRow {
+    #[inline(always)]
+    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+        rsx! {
+            tr {
+                td {
+                    LoadedComponent { input: mapper.map(self.confirmation_time) }
+                }
+                td {
+                    LoadedComponent { input: mapper.map(self.txid) }
+                }
+                td { class: "font-bold",
+                    Tooltip { tooltip_text: self.amount_tt,
+                        LoadedComponent { input: mapper.map(self.amount) }
+                    }
+                }
+                td { class: "font-semibold",
+                    LoadedComponent::<UIBtcAmount> { input: self.balance_after.into() }
+                }
+            }
+        }
+    }
+    fn place_holder() -> Self {
+        Self {
+            confirmation_time: UIBlockTime::place_holder(),
+            txid: ArcStr::place_holder(),
+            amount_tt: ArcStr::place_holder(),
+            amount: UIBtcAmount::place_holder(),
+            balance_after: Some(UIBtcAmount::place_holder()),
+        }
+    }
+    #[inline(always)]
+    fn visible_place_holder() -> bool {
+        true
+    }
+}
 
 #[component]
 pub(super) fn TransactionsHistory() -> Element {
     log::debug!("TransactionsHistory Rendered");
 
-    let wallet_status = use_context::<Resource<Option<WalletStatus>>>();
-    let wallet_transactions = use_context::<Resource<RcType<[TransactionSummary]>>>();
+    let wallet_status = use_context::<Resource<Result<WalletStatus, String>>>();
+    let wallet_transactions = use_context::<Resource<ArcType<[TransactionSummary]>>>();
 
     let transaction_history_items = use_memo(move || {
         log::debug!("use_memo_transaction_history_items - start compute");
-        let transaction_history_items = if let Some(wallet_transactions) =
-            wallet_transactions.cloned()
-        {
+        let transaction_history_items = wallet_transactions.cloned().map(|wtx| {
             let final_balance = match &*wallet_status.read() {
-                Some(Some(ws)) => Some(SignedAmount::from_sat(
+                Some(Ok(ws)) => Some(SignedAmount::from_sat(
                     ws.balance.total_balance().get_total() as i64,
                 )),
                 _ => None,
             };
-            wallet_transactions
-                .iter()
+            wtx.iter()
                 .scan(final_balance, |balance, tx_sum| {
-                    let confirmation_time = LoadedElement::Loaded(tx_sum.confirmation_time.clone());
-                    let txid = LoadedElement::Loaded(tx_sum.txid);
+                    let confirmation_time = UIBlockTime(tx_sum.confirmation_time.clone());
+                    let txid = ArcStr::from(tx_sum.txid.to_string());
                     let sent = tx_sum
                         .owned_inputs
                         .iter()
@@ -64,41 +134,33 @@ pub(super) fn TransactionsHistory() -> Element {
                         .to_signed()
                         .expect("Fee cannot be bigger than MAX_MONEY");
                     let fee_rate = tx_sum.fee_rate;
-                    let balance_after = LoadedElement::Loaded((*balance).into());
+
+                    let amount_tt = ArcStr::from(format!(
+                        "Sent: {} | Received: {} | Fee: {} ({} sat/vB)",
+                        &amount_to_signed_string(sent)[1..],
+                        &amount_to_signed_string(received)[1..],
+                        &amount_to_signed_string(fee)[1..],
+                        fee_rate.to_sat_per_vb_floor()
+                    ));
+
+                    let balance_after = balance.map(|b| UIBtcAmount::new(Some(b), false));
 
                     // Update the balance (if any)
                     let amount = received - sent;
                     balance.as_mut().map(|balance| *balance -= amount);
 
-                    let amount = LoadedElement::Loaded(amount.into());
+                    let amount = UIBtcAmount::new(Some(amount), true);
 
-                    Some(TransactionsHistoryItemProps {
+                    Some(UITransactionsHistoryRow {
                         confirmation_time,
                         txid,
-                        sent,
-                        received,
-                        fee,
-                        fee_rate,
+                        amount_tt,
                         amount,
                         balance_after,
                     })
                 })
-                .collect()
-        } else {
-            vec![
-                TransactionsHistoryItemProps {
-                    confirmation_time: LoadedElement::Loading,
-                    txid: LoadedElement::Loading,
-                    sent: SignedAmount::place_holder(),
-                    received: SignedAmount::place_holder(),
-                    fee: SignedAmount::place_holder(),
-                    fee_rate: FeeRate::ZERO,
-                    amount: LoadedElement::Loading,
-                    balance_after: LoadedElement::Loading,
-                };
-                5
-            ]
-        };
+                .collect::<ArcType<[_]>>()
+        });
         log::debug!("use_memo_transaction_history_items - finish compute");
         transaction_history_items
     });
@@ -118,89 +180,10 @@ pub(super) fn TransactionsHistory() -> Element {
                     }
                 }
                 tbody {
-                    for transaction_history_item in transaction_history_items() {
-                        TransactionsHistoryItem { ..transaction_history_item }
-                    }
+                    LoadedComponent::<ArcType<[UITransactionsHistoryRow]>> { input: transaction_history_items.into() }
                 }
             }
         
-        }
-    }
-}
-
-#[component]
-fn TransactionsHistoryItem(
-    confirmation_time: LoadedElement<Option<BlockTime>>,
-    txid: LoadedElement<bitcoin::Txid>,
-    sent: SignedAmount,
-    received: SignedAmount,
-    fee: SignedAmount,
-    fee_rate: FeeRate,
-    amount: LoadedElement<DisplayBtcAmount>,
-    balance_after: LoadedElement<DisplayBtcAmount>,
-) -> Element {
-    let amount_tt = format!(
-        "Sent: {} | Received: {} | Fee: {} ({} sat/vB)",
-        &amount_to_signed_string(sent)[1..],
-        &amount_to_signed_string(received)[1..],
-        &amount_to_signed_string(fee)[1..],
-        fee_rate.to_sat_per_vb_floor()
-    )
-    .into();
-
-    rsx! {
-        tr {
-            td {
-                ConfirmationTime { confirmation_time }
-            }
-            td {
-                Txid { txid }
-            }
-            td { class: "font-bold",
-                Tooltip { tooltip_text: amount_tt,
-                    BtcAmount { amount, diff_style: true }
-                }
-            }
-            td { class: "font-semibold",
-                BtcAmount { amount: balance_after }
-            }
-        
-        }
-    }
-}
-
-#[component]
-fn ConfirmationTime(confirmation_time: LoadedElement<Option<BlockTime>>) -> Element {
-    let tooltip_text =
-        if let LoadedElement::Loaded(Some(BlockTime { height, .. })) = &confirmation_time {
-            RcStr::from(format!("Included in block #{height}"))
-        } else {
-            RcStr::from("Not included yet")
-        };
-
-    let timestamp = confirmation_time.map(|opt| match opt {
-        Some(BlockTime { timestamp, .. }) => DisplayTimestamp::Ts(timestamp),
-        None => DisplayTimestamp::None,
-    });
-
-    rsx! {
-        Tooltip { tooltip_text,
-            Date { timestamp }
-        }
-    }
-}
-
-#[component]
-fn Txid(txid: LoadedElement<bitcoin::Txid>) -> Element {
-    let (is_place_holder, txid) = txid.extract();
-
-    let txid_s = txid.to_string();
-
-    rsx! {
-        span {
-            class: "text-nowrap inline-block uppercase font-mono",
-            class: if is_place_holder { "skeleton text-transparent" },
-            {txid_s}
         }
     }
 }

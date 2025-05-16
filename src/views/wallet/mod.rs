@@ -1,6 +1,5 @@
 pub mod configuration;
 mod heritage_configurations_history;
-mod misc;
 mod transactions_history;
 
 use dioxus::prelude::*;
@@ -11,17 +10,22 @@ use btc_heritage_wallet::{
 };
 
 use crate::{
-    components::{
-        misc::Date,
-        wallet::{KeyProviderBadge, OnlineWalletBadge},
+    components::loaded::{
+        badge::{UIKeyProviderBadge, UIOnlineWalletBadge},
+        balance::UIWalletBalance,
+        timestamp::LastSyncSpan,
+        LoadedComponent,
     },
-    helper_hooks::{self, use_memo_heirs, use_resource_database_heirs, use_resource_service_heirs},
-    utils::{RcStr, RcType},
+    helper_hooks::{
+        self, use_memo_heirs, use_memo_keyprovider_status, use_memo_online_status,
+        use_resource_database_heirs, use_resource_service_heirs,
+    },
+    utils::{ArcStr, ArcType},
     Route,
 };
 
 #[component]
-pub fn WalletWrapperLayout(wallet_name: RcStr) -> Element {
+pub fn WalletWrapperLayout(wallet_name: ArcStr) -> Element {
     log::debug!("WalletWrapperView Rendered");
 
     let wallet = helper_hooks::use_resource_wallet(wallet_name);
@@ -45,6 +49,7 @@ pub fn WalletWrapperLayout(wallet_name: RcStr) -> Element {
     use_context_provider(|| wallet_utxos);
     use_context_provider(|| wallet_heritage_configs);
     use_context_provider(|| heirs);
+    use_context_provider(|| service_heirs);
 
     use_drop(|| log::debug!("WalletWrapperView Dropped"));
     rsx! {
@@ -53,16 +58,17 @@ pub fn WalletWrapperLayout(wallet_name: RcStr) -> Element {
 }
 
 #[component]
-pub fn WalletView(wallet_name: RcStr) -> Element {
+pub fn WalletView(wallet_name: ArcStr) -> Element {
     log::debug!("WalletView Rendered");
 
     let navigator = use_navigator();
 
     let wallet = use_context::<Resource<Wallet>>();
-    let wallet_status = use_context::<Resource<Option<WalletStatus>>>();
+    let wallet_status = use_context::<Resource<Result<WalletStatus, String>>>();
 
     let fingerprint = helper_hooks::use_memo_fingerprint(wallet);
-    let last_synced = helper_hooks::use_memo_last_sync(wallet_status);
+    let keyprovider_status = use_memo_keyprovider_status(wallet, wallet_status);
+    let online_status = use_memo_online_status(wallet, wallet_status);
 
     use_drop(|| log::debug!("WalletView Dropped"));
 
@@ -83,7 +89,7 @@ pub fn WalletView(wallet_name: RcStr) -> Element {
                     div { class: "h-fit",
                         div { class: "text-base font-light", "Last synced:" }
                         div { class: "text-base font-bold",
-                            Date { timestamp: last_synced() }
+                            LoadedComponent::<LastSyncSpan> { input: wallet_status.into() }
                         }
                     }
                 }
@@ -112,13 +118,13 @@ pub fn WalletView(wallet_name: RcStr) -> Element {
 
             div { class: "flex flex-row justify-center gap-1 m-4",
                 span { "Key Provider: " }
-                KeyProviderBadge { wallet }
+                LoadedComponent::<UIKeyProviderBadge> { input: keyprovider_status.into() }
                 div { class: "basis-4" }
                 span { "Online Wallet: " }
-                OnlineWalletBadge { wallet, wallet_status }
+                LoadedComponent::<UIOnlineWalletBadge> { input: online_status.into() }
             }
             div { class: "flex flex-row justify-center gap-4 m-4",
-                misc::Balance {}
+                LoadedComponent::<UIWalletBalance> { input: wallet_status.into() }
                 button { class: "btn btn-secondary size-64 rounded-4xl uppercase text-3xl font-black",
                     "Send"
                 }
@@ -137,7 +143,7 @@ pub fn WalletView(wallet_name: RcStr) -> Element {
 fn UtxoList() -> Element {
     log::debug!("UtxoList Rendered");
 
-    let wallet_utxos = use_context::<Resource<RcType<[HeritageUtxo]>>>();
+    let wallet_utxos = use_context::<Resource<ArcType<[HeritageUtxo]>>>();
 
     use_drop(|| log::debug!("UtxoList Dropped"));
     rsx! {

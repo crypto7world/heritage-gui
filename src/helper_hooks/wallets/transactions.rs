@@ -6,12 +6,12 @@ use btc_heritage_wallet::{
 
 use crate::{
     state_management,
-    utils::{wait_resource, RcType},
+    utils::{wait_resource, ArcType},
 };
 
 pub fn use_resource_wallet_transactions(
     wallet: Resource<Wallet>,
-) -> Resource<RcType<[TransactionSummary]>> {
+) -> Resource<ArcType<[TransactionSummary]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_transactions - start");
 

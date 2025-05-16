@@ -2,58 +2,82 @@ use btc_heritage_wallet::heritage_service_api_client::AccountXPubWithStatus;
 use btc_heritage_wallet::{AnyKeyProvider, Wallet};
 use dioxus::prelude::*;
 
-use crate::components::misc::{Badge, BadgeType, Tooltip};
+use crate::components::loaded::badge::UIBadge;
+use crate::components::loaded::{ComponentMapper, FromRef, LoadedComponent, LoadedElement};
 use crate::helper_hooks::use_resource_wallet_account_xpubs;
-use crate::utils::RcStr;
+use crate::utils::{ArcStr, ArcType};
 
-/// Represents the status of an account extended public key.
-#[derive(Debug, Clone, PartialEq)]
-enum XPubStatus {
-    Used,
-    Unused,
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct UIXPubStatusBadge(UIBadge);
+impl LoadedElement for UIXPubStatusBadge {
+    #[inline(always)]
+    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+        self.0.element(mapper)
+    }
+
+    fn place_holder() -> Self {
+        Self(UIBadge::place_holder())
+    }
 }
+impl FromRef<AccountXPubWithStatus> for UIXPubStatusBadge {
+    fn from_ref(status: &AccountXPubWithStatus) -> Self {
+        Self(match status {
+            AccountXPubWithStatus::Used(_) => UIBadge {
+                text: "Used",
+                color_class: "badge-success",
+                tooltip: "This XPub has been consummed",
+            },
 
-impl XPubStatus {
-    /// Returns the appropriate badge text for the status.
-    fn badge_text(&self) -> &'static str {
-        match self {
-            XPubStatus::Used => "Used",
-            XPubStatus::Unused => "Unused",
-        }
-    }
-
-    /// Returns the CSS color class for the status badge.
-    fn color_class(&self) -> &'static str {
-        match self {
-            XPubStatus::Used => "badge-success",
-            XPubStatus::Unused => "badge-warning",
-        }
-    }
-
-    /// Returns the tooltip text for the status badge.
-    fn tooltip(&self) -> &'static str {
-        match self {
-            XPubStatus::Used => "This XPub is currently in use",
-            XPubStatus::Unused => "This XPub is not currently in use",
-        }
+            AccountXPubWithStatus::Unused(_) => UIBadge {
+                text: "Unused",
+                color_class: "badge-warning",
+                tooltip: "This XPub is available for future use",
+            },
+        })
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-/// A custom badge type for XPub status display.
-struct XPubBadge(XPubStatus);
-
-impl BadgeType for XPubBadge {
-    fn text(&self) -> &'static str {
-        self.0.badge_text()
+struct UIXPubRow {
+    badge: UIXPubStatusBadge,
+    descriptor: ArcStr,
+}
+impl LoadedElement for UIXPubRow {
+    #[inline(always)]
+    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+        rsx! {
+            tr { key: "{self.descriptor}",
+                td {
+                    LoadedComponent { input: mapper.map(self.badge) }
+                }
+                td {
+                    div { class: "font-mono text-sm",
+                        LoadedComponent { input: mapper.map(self.descriptor) }
+                    }
+                }
+            
+            }
+        }
     }
-
-    fn color_class(&self) -> &'static str {
-        self.0.color_class()
+    fn place_holder() -> Self {
+        Self {
+            badge: UIXPubStatusBadge::place_holder(),
+            descriptor: ArcStr::place_holder(),
+        }
     }
-
-    fn tooltip(&self) -> &'static str {
-        self.0.tooltip()
+    #[inline(always)]
+    fn visible_place_holder() -> bool {
+        true
+    }
+}
+impl FromRef<AccountXPubWithStatus> for UIXPubRow {
+    fn from_ref(status: &AccountXPubWithStatus) -> Self {
+        let descriptor = match status {
+            AccountXPubWithStatus::Used(account_xpub)
+            | AccountXPubWithStatus::Unused(account_xpub) => ArcStr::from(account_xpub.to_string()),
+        };
+        let badge = UIXPubStatusBadge::from_ref(status);
+        Self { badge, descriptor }
     }
 }
 
@@ -109,58 +133,7 @@ pub fn AccountXPubConfig() -> Element {
                         }
                     }
                     tbody {
-                        {
-                            match account_xpubs.cloned() {
-                                Some(xpubs) => {
-                                    if xpubs.is_empty() {
-                                        rsx! {
-                                            tr {
-                                                td { class: "text-center", colspan: "2", "No XPubs configured" }
-                                            }
-                                        }
-                                    } else {
-                                        rsx! {
-                                            for xpub in xpubs.iter() {
-                                                {
-                                                    let (status, descriptor) = match xpub {
-                                                        AccountXPubWithStatus::Used(x) => (XPubStatus::Used, x.to_string()),
-                                                        AccountXPubWithStatus::Unused(x) => (XPubStatus::Unused, x.to_string()),
-                                                    };
-                                                    rsx! {
-                                                        tr { key: "{descriptor}",
-                                                            td {
-                                                                Badge { badge: XPubBadge(status) }
-                                                            }
-                                                            td {
-                                                                div { class: "font-mono text-sm truncate max-w-xs hover:text-clip",
-                                                                    Tooltip { tooltip_text: RcStr::from(&descriptor),
-                                                                        span { "{descriptor}" }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                None => {
-                                    rsx! {
-                                        tr {
-                                            td { class: "animate-pulse", colspan: "2",
-                                                div { class: "h-4 bg-base-300 rounded w-full" }
-                                            }
-                                        }
-                                        tr {
-                                            td { class: "animate-pulse", colspan: "2",
-                                                div { class: "h-4 bg-base-300 rounded w-full" }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        LoadedComponent::<ArcType<[UIXPubRow]>> { input: account_xpubs.into() }
                     }
                 }
             }

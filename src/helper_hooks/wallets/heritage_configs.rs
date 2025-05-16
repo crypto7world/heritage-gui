@@ -4,12 +4,12 @@ use btc_heritage_wallet::{btc_heritage::HeritageConfig, DatabaseItem, OnlineWall
 
 use crate::{
     state_management,
-    utils::{wait_resource, RcType},
+    utils::{wait_resource, ArcType},
 };
 
 pub fn use_resource_wallet_heritage_configs(
     wallet: Resource<Wallet>,
-) -> Resource<RcType<[RcType<HeritageConfig>]>> {
+) -> Resource<ArcType<[ArcType<HeritageConfig>]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_heritage_configs - start");
 
@@ -35,7 +35,7 @@ pub fn use_resource_wallet_heritage_configs(
                 })
                 .unwrap_or_default()
                 .into_iter()
-                .map(RcType::new)
+                .map(ArcType::new)
                 .collect()
         } else {
             unreachable!("wait_resource barrier ensures we can't go there")

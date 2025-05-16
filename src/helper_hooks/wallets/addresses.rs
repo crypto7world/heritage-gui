@@ -6,7 +6,7 @@ use btc_heritage_wallet::{
 
 use crate::{
     state_management,
-    utils::{wait_resource, RcType},
+    utils::{wait_resource, ArcType},
 };
 
 /// Resource hook for retrieving all addresses associated with a wallet
@@ -19,7 +19,7 @@ use crate::{
 /// ```
 pub fn use_resource_wallet_addresses(
     wallet: Resource<Wallet>,
-) -> Resource<RcType<[WalletAddress]>> {
+) -> Resource<ArcType<[WalletAddress]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_addresses - start");
 

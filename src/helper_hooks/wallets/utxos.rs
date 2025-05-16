@@ -6,10 +6,10 @@ use btc_heritage_wallet::{
 
 use crate::{
     state_management,
-    utils::{wait_resource, RcType},
+    utils::{wait_resource, ArcType},
 };
 
-pub fn use_resource_wallet_utxos(wallet: Resource<Wallet>) -> Resource<RcType<[HeritageUtxo]>> {
+pub fn use_resource_wallet_utxos(wallet: Resource<Wallet>) -> Resource<ArcType<[HeritageUtxo]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_utxos - start");
 

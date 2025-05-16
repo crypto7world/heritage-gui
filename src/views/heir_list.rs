@@ -1,14 +1,17 @@
-use btc_heritage_wallet::{btc_heritage::HeirConfig, AnyKeyProvider};
+use btc_heritage_wallet::btc_heritage::HeirConfig;
 use dioxus::prelude::*;
 
 use std::ops::Deref;
 
 use crate::{
-    components::misc::{Badge, HeirBadgeType, SkeletonBadgeType},
+    components::loaded::{
+        badge::UIHeirBadges, ComponentMapper, FromRef, ImplDirectIntoLoadedElementInputMarker,
+        LoadedComponent, LoadedElement,
+    },
     helper_hooks::{
         use_memo_heirs, use_resource_database_heirs, use_resource_service_heirs, CompositeHeir,
     },
-    utils::RcStr,
+    utils::{ArcStr, ArcType},
 };
 
 #[component]
@@ -31,150 +34,105 @@ fn HeirList() -> Element {
 
     let database_heirs = use_resource_database_heirs();
     let service_heirs = use_resource_service_heirs();
-    let heirs = use_memo_heirs(database_heirs, service_heirs);
-
+    let heirs_map = use_memo_heirs(database_heirs, service_heirs);
+    let service_loading = service_heirs.read().is_none();
     let heirs = use_memo(move || {
-        heirs
-            .read()
+        let service_loading = service_heirs.read().is_none();
+        heirs_map()
             .values()
-            .map(|composite_heir| {
-                let CompositeHeir {
-                    name,
-                    heir_config,
-                    db_heir,
-                    service_heir,
-                } = composite_heir;
-                let name = name.clone();
-                let heir_config_type = match heir_config.deref() {
-                    HeirConfig::SingleHeirPubkey(_) => "Public Key",
-                    HeirConfig::HeirXPubkey(_) => "Extended Public Key",
-                };
-                let heir_config_fingerprint = RcStr::from(heir_config.fingerprint().to_string());
-
-                let database_badge = db_heir.iter().map(|_| HeirBadgeType::Database);
-                let key_provider_badge = db_heir
-                    .iter()
-                    .map(|db_heir| match db_heir.key_provider() {
-                        AnyKeyProvider::None => None,
-                        AnyKeyProvider::LocalKey(_) => Some(HeirBadgeType::LocalKeyProvider),
-                        AnyKeyProvider::Ledger(_) => Some(HeirBadgeType::LedgerKeyProvider),
-                    })
-                    .flatten();
-                let service_badge = if let Some(_) = service_heir {
-                    Some(HeirBadgeType::Service)
-                } else {
-                    None
-                };
-                let badges = database_badge
-                    .chain(key_provider_badge)
-                    .chain(service_badge.into_iter())
-                    .collect();
-                let service_heir_id = if service_heirs.read().is_some() {
-                    Some(
-                        service_heir
-                            .as_ref()
-                            .map(|service_heir| RcStr::from(&service_heir.id)),
-                    )
-                } else {
-                    None
-                };
-                HeirItemProps {
-                    name,
-                    heir_config_type,
-                    heir_config_fingerprint,
-                    badges,
-                    service_heir_id,
-                }
-            })
-            .collect::<Vec<_>>()
+            .cloned()
+            .map(|ch| (ch, service_loading))
+            .collect::<ArcType<[_]>>()
     });
 
     use_drop(|| log::debug!("HeirList Dropped"));
     rsx! {
         div { class: "container mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-5 gap-12",
-            for heir_item_prop in heirs() {
-                div { class: "w-full aspect-square content-center",
-                    HeirItem { ..heir_item_prop }
-                }
+            LoadedComponent::<ArcType<[UIHeirItem]>> { input: heirs.into() }
+            if service_loading {
+                LoadedComponent::<UIHeirItem> { input: None::<UIHeirItem>.into() }
             }
-            if service_heirs().is_none() {
-                div { class: "w-full aspect-square content-center", PlaceHolderHeirItem {} }
-            }
-        
         }
     }
 }
 
-#[component]
-fn HeirItem(
-    name: RcStr,
+#[derive(Debug, Clone, PartialEq)]
+struct UIHeirItem {
+    name: ArcStr,
     heir_config_type: &'static str,
-    heir_config_fingerprint: RcStr,
-    badges: Vec<HeirBadgeType>,
-    service_heir_id: Option<Option<RcStr>>,
-) -> Element {
-    log::debug!("HeirItem Rendered");
+    heir_config_fingerprint: ArcStr,
+    badges: UIHeirBadges,
+    service_loading: bool,
+}
+impl ImplDirectIntoLoadedElementInputMarker for UIHeirItem {}
+impl FromRef<(CompositeHeir, bool)> for UIHeirItem {
+    fn from_ref((composite_heir, service_loading): &(CompositeHeir, bool)) -> Self {
+        let badges = UIHeirBadges::from_ref(composite_heir);
 
-    let service_loading = service_heir_id.is_none();
+        let CompositeHeir {
+            name, heir_config, ..
+        } = composite_heir;
+        let name = name.clone();
+        let heir_config_type = match heir_config.deref() {
+            HeirConfig::SingleHeirPubkey(_) => "Public Key",
+            HeirConfig::HeirXPubkey(_) => "Extended Public Key",
+        };
+        let heir_config_fingerprint = ArcStr::from(heir_config.fingerprint().to_string());
 
-    use_drop(|| log::debug!("HeirItem Dropped"));
-    rsx! {
-        div { class: "card card-lg border shadow-xl size-fit mx-auto",
-            div { class: "card-body aspect-square w-auto max-h-fit",
+        Self {
+            name,
+            heir_config_type,
+            heir_config_fingerprint,
+            badges: badges.into(),
+            service_loading: *service_loading,
+        }
+    }
+}
+impl LoadedElement for UIHeirItem {
+    #[inline(always)]
+    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+        rsx! {
+            div { class: "w-full aspect-square content-center",
+                div { class: "card card-lg border shadow-xl size-fit mx-auto",
+                    div { class: "card-body aspect-square w-auto max-h-fit",
 
-                div { class: "card-title text-3xl font-black", {name} }
-                div { class: "flex flex-col",
-                    div { class: "font-light", "Type" }
-                    div { class: "text-lg font-bold text-nowrap", {heir_config_type} }
-                }
-                div { class: "flex flex-col",
-                    div { class: "font-light text-nowrap", "Key Fingerprint" }
-                    div { class: "text-lg font-bold", {heir_config_fingerprint} }
-                }
+                        div { class: "card-title text-3xl font-black",
+                            LoadedComponent { input: mapper.map(self.name) }
+                        }
+                        div { class: "flex flex-col",
+                            div { class: "font-light", "Type" }
+                            div { class: "text-lg font-bold text-nowrap",
+                                LoadedComponent { input: mapper.map(self.heir_config_type) }
+                            }
+                        }
+                        div { class: "flex flex-col",
+                            div { class: "font-light text-nowrap", "Key Fingerprint" }
+                            div { class: "text-lg font-bold",
+                                LoadedComponent { input: mapper.map(self.heir_config_fingerprint) }
+                            }
+                        }
 
-                div { class: "grow" }
-                div { class: "flex flex-row flex-wrap justify-center gap-2",
-                    for badge in badges {
-                        Badge { badge }
-                    }
-                    if service_loading {
-                        Badge { badge: SkeletonBadgeType }
+                        div { class: "grow" }
+
+                        div { class: "flex flex-row flex-wrap justify-center gap-2",
+                            LoadedComponent { input: mapper.map(self.badges) }
+                        }
                     }
                 }
             }
         }
     }
-}
-
-#[component]
-fn PlaceHolderHeirItem() -> Element {
-    log::debug!("PlaceHolderHeirItem Rendered");
-    use_drop(|| log::debug!("PlaceHolderHeirItem Dropped"));
-    rsx! {
-        div { class: "card card-lg border shadow-xl size-fit mx-auto",
-            div { class: "card-body aspect-square w-auto max-h-fit",
-                div { class: "card-title text-3xl font-black skeleton text-transparent",
-                    "some_name"
-                }
-                div { class: "flex flex-col",
-                    div { class: "font-light skeleton text-transparent", "Type" }
-                    div { class: "text-lg font-bold text-nowrap skeleton text-transparent",
-                        "Extended Public Key"
-                    }
-                }
-                div { class: "flex flex-col",
-                    div { class: "font-light text-nowrap skeleton text-transparent",
-                        "Key Fingerprint"
-                    }
-                    div { class: "text-lg font-bold skeleton text-transparent", "12345678" }
-                }
-
-                div { class: "grow" }
-                div { class: "flex flex-row flex-wrap gap-1",
-                    Badge { badge: SkeletonBadgeType }
-                    Badge { badge: SkeletonBadgeType }
-                }
-            }
+    fn place_holder() -> Self {
+        Self {
+            name: ArcStr::place_holder(),
+            heir_config_type: <&'static str>::place_holder(),
+            heir_config_fingerprint: ArcStr::place_holder(),
+            badges: UIHeirBadges::place_holder(),
+            service_loading: false,
         }
+    }
+    #[inline(always)]
+    fn visible_place_holder() -> bool {
+        true
     }
 }

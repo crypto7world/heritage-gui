@@ -10,26 +10,26 @@ use btc_heritage_wallet::{
     Database, DatabaseItem, Heir, HeirWallet, Wallet,
 };
 
-use crate::utils::{RcStr, RcType};
+use crate::utils::{ArcStr, ArcType};
 
 pub enum DatabaseItemCommand<DBI: DatabaseItem + 'static> {
     CreateDatabaseItem {
-        item: RcType<DBI>,
+        item: ArcType<DBI>,
         result: oneshot::Sender<Result<(), DbError>>,
     },
     LoadDatabaseItem {
-        name: RcStr,
+        name: ArcStr,
         result: oneshot::Sender<Result<DBI, DbError>>,
     },
     SaveDatabaseItem {
-        item: RcType<DBI>,
+        item: ArcType<DBI>,
         result: oneshot::Sender<Result<(), DbError>>,
     },
     ListDatabaseItemNames {
-        result: oneshot::Sender<Result<Vec<RcStr>, DbError>>,
+        result: oneshot::Sender<Result<Vec<ArcStr>, DbError>>,
     },
     ListDatabaseItems {
-        result: oneshot::Sender<Result<Vec<RcType<DBI>>, DbError>>,
+        result: oneshot::Sender<Result<Vec<ArcType<DBI>>, DbError>>,
     },
 }
 impl<DBI: DatabaseItem + 'static> core::fmt::Debug for DatabaseItemCommand<DBI> {
@@ -145,7 +145,7 @@ async fn process_db_item_command<DBI: std::fmt::Debug + DatabaseItem + Sync>(
                 .send(
                     DBI::list_names(db)
                         .await
-                        .map(|strings| strings.into_iter().map(RcStr::from).collect()),
+                        .map(|strings| strings.into_iter().map(ArcStr::from).collect()),
                 )
                 .expect("chanel failure");
         }
@@ -154,7 +154,7 @@ async fn process_db_item_command<DBI: std::fmt::Debug + DatabaseItem + Sync>(
                 .send(
                     DBI::all_in_db(db)
                         .await
-                        .map(|r| r.into_iter().map(RcType::from).collect()),
+                        .map(|r| r.into_iter().map(ArcType::from).collect()),
                 )
                 .expect("chanel failure");
         }
