@@ -139,11 +139,11 @@ fn ServiceOnlyWalletItem(wallet_meta: EqArcType<HeritageWalletMeta>) -> Element 
                     }
                     div { class: "grow" }
 
-                    LoadedComponent::<UIBalanceSummary> { input: wallet_meta.clone().into() }
+                    LoadedComponent::<UIBalanceSummary> { input: wallet_meta.ref_into() }
                     div { class: "text-sm font-light text-left",
                         "Last Sync: "
                         span { class: "font-semibold",
-                            LoadedComponent::<LastSyncSpan> { input: wallet_meta.into() }
+                            LoadedComponent::<LastSyncSpan> { input: wallet_meta.ref_into() }
                         }
                     }
 
