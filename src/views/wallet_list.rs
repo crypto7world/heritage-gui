@@ -3,16 +3,16 @@ use dioxus::prelude::*;
 use btc_heritage_wallet::heritage_service_api_client::HeritageWalletMeta;
 
 use crate::{
-    components::loaded::{
+    components::{
         badge::{
             ExternalDependencyStatus, KeyProviderType, OnlineWalletType, UIKeyProviderBadge,
             UIOnlineWalletBadge,
         },
         balance::UIBalanceSummary,
         timestamp::LastSyncSpan,
-        LoadedComponent, RefInto,
     },
     helper_hooks::{self, use_memo_keyprovider_status, use_memo_online_status},
+    loaded::prelude::*,
     utils::{ArcStr, ArcType, EqArcType},
     Route,
 };

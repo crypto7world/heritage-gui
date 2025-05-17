@@ -7,7 +7,6 @@ use btc_heritage_wallet::{
     btc_heritage::HeirConfig, heritage_service_api_client::Heir as ServiceHeir,
 };
 
-use crate::components::loaded::ImplDirectIntoLoadedElementInputMarker;
 use crate::{
     state_management::{self, use_database_service, use_service_client_service},
     utils::{ArcStr, ArcType, EqArcType},
@@ -55,7 +54,6 @@ pub struct CompositeHeir {
     pub db_heir: Option<EqArcType<DbHeir>>,
     pub service_heir: Option<EqArcType<ServiceHeir>>,
 }
-impl ImplDirectIntoLoadedElementInputMarker for CompositeHeir {}
 
 pub fn use_memo_heirs(
     database_heirs: Resource<Vec<ArcType<DbHeir>>>,

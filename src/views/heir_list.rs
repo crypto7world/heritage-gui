@@ -4,13 +4,11 @@ use dioxus::prelude::*;
 use std::ops::Deref;
 
 use crate::{
-    components::loaded::{
-        badge::UIHeirBadges, ComponentMapper, FromRef, ImplDirectIntoLoadedElementInputMarker,
-        LoadedComponent, LoadedElement,
-    },
+    components::badge::UIHeirBadges,
     helper_hooks::{
         use_memo_heirs, use_resource_database_heirs, use_resource_service_heirs, CompositeHeir,
     },
+    loaded::prelude::*,
     utils::{ArcStr, ArcType},
 };
 
@@ -64,7 +62,6 @@ struct UIHeirItem {
     badges: UIHeirBadges,
     service_loading: bool,
 }
-impl ImplDirectIntoLoadedElementInputMarker for UIHeirItem {}
 impl FromRef<(CompositeHeir, bool)> for UIHeirItem {
     fn from_ref((composite_heir, service_loading): &(CompositeHeir, bool)) -> Self {
         let badges = UIHeirBadges::from_ref(composite_heir);
@@ -89,33 +86,34 @@ impl FromRef<(CompositeHeir, bool)> for UIHeirItem {
     }
 }
 impl LoadedElement for UIHeirItem {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         rsx! {
             div { class: "w-full aspect-square content-center",
                 div { class: "card card-lg border shadow-xl size-fit mx-auto",
                     div { class: "card-body aspect-square w-auto max-h-fit",
 
                         div { class: "card-title text-3xl font-black",
-                            LoadedComponent { input: mapper.map(self.name) }
+                            LoadedComponent { input: m.map(self.name) }
                         }
                         div { class: "flex flex-col",
                             div { class: "font-light", "Type" }
                             div { class: "text-lg font-bold text-nowrap",
-                                LoadedComponent { input: mapper.map(self.heir_config_type) }
+                                LoadedComponent { input: m.map(self.heir_config_type) }
                             }
                         }
                         div { class: "flex flex-col",
                             div { class: "font-light text-nowrap", "Key Fingerprint" }
                             div { class: "text-lg font-bold",
-                                LoadedComponent { input: mapper.map(self.heir_config_fingerprint) }
+                                LoadedComponent { input: m.map(self.heir_config_fingerprint) }
                             }
                         }
 
                         div { class: "grow" }
 
                         div { class: "flex flex-row flex-wrap justify-center gap-2",
-                            LoadedComponent { input: mapper.map(self.badges) }
+                            LoadedComponent { input: m.map(self.badges) }
                         }
                     }
                 }
@@ -130,9 +128,5 @@ impl LoadedElement for UIHeirItem {
             badges: UIHeirBadges::place_holder(),
             service_loading: false,
         }
-    }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
     }
 }

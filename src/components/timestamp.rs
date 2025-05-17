@@ -3,9 +3,10 @@ use btc_heritage_wallet::{
 };
 use dioxus::prelude::*;
 
-use crate::utils::{timestamp_to_date_string, timestamp_to_string};
-
-use super::{ComponentMapper, FromRef, LoadedElement};
+use crate::{
+    loaded::prelude::*,
+    utils::{timestamp_to_date_string, timestamp_to_string},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum UITimestampInner {
@@ -57,8 +58,9 @@ impl UITimestamp {
     }
 }
 impl LoadedElement for UITimestamp {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, _mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, _m: M) -> Element {
         let last_synced_s = match self.ts {
             UITimestampInner::Ts(timestamp) => match self.style {
                 UITimestampStyle::Full => timestamp_to_string(timestamp),
@@ -93,9 +95,10 @@ impl FromRef<HeritageWalletMeta> for LastSyncSpan {
     }
 }
 impl LoadedElement for LastSyncSpan {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
-        self.0.element(mapper)
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
+        self.0.element(m)
     }
 
     fn place_holder() -> Self {

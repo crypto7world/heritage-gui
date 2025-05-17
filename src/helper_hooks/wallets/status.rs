@@ -6,7 +6,7 @@ use btc_heritage_wallet::{
 };
 
 use crate::{
-    components::loaded::badge::{ExternalDependencyStatus, KeyProviderType, OnlineWalletType},
+    components::badge::{ExternalDependencyStatus, KeyProviderType, OnlineWalletType},
     state_management,
     utils::wait_resource,
 };

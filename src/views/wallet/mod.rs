@@ -10,16 +10,16 @@ use btc_heritage_wallet::{
 };
 
 use crate::{
-    components::loaded::{
+    components::{
         badge::{UIKeyProviderBadge, UIOnlineWalletBadge},
         balance::UIWalletBalance,
         timestamp::LastSyncSpan,
-        LoadedComponent,
     },
     helper_hooks::{
         self, use_memo_heirs, use_memo_keyprovider_status, use_memo_online_status,
         use_resource_database_heirs, use_resource_service_heirs,
     },
+    loaded::LoadedComponent,
     utils::{ArcStr, ArcType},
     Route,
 };

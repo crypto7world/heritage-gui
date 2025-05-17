@@ -12,14 +12,13 @@ use btc_heritage_wallet::{
 };
 
 use crate::{
-    components::loaded::{
+    components::{
         badge::{UIBadge, UIHeirBadges},
         balance::UIBtcAmount,
         timestamp::UITimestamp,
-        AlwaysLoadedComponent, ComponentMapper, FromRef, ImplDirectIntoLoadedElementInputMarker,
-        LoadedComponent, LoadedElement, RefInto,
     },
     helper_hooks::CompositeHeir,
+    loaded::prelude::*,
     utils::{ArcStr, ArcType},
 };
 
@@ -29,22 +28,22 @@ struct UIKnownHeir {
     email: Option<ArcStr>,
     badges: UIHeirBadges,
 }
-impl ImplDirectIntoLoadedElementInputMarker for UIKnownHeir {}
 impl LoadedElement for UIKnownHeir {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         rsx! {
             div { class: "flex flex-row gap-4",
                 div {
                     span { class: "text-xl font-bold mr-2",
-                        LoadedComponent { input: mapper.map(self.name) }
+                        LoadedComponent { input: m.map(self.name) }
                     }
                     if let Some(email) = self.email {
                         span { class: "text-base font-semibold", "({email})" }
                     }
                 }
                 div { class: "grow" }
-                LoadedComponent { input: mapper.map(self.badges) }
+                LoadedComponent { input: m.map(self.badges) }
             }
         }
     }
@@ -54,10 +53,6 @@ impl LoadedElement for UIKnownHeir {
             email: None,
             badges: UIHeirBadges::place_holder(),
         }
-    }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
     }
 }
 impl FromRef<CompositeHeir> for UIKnownHeir {
@@ -84,18 +79,15 @@ enum UIHeritageConfig {
     V1(UIHeritageConfigV1),
 }
 impl LoadedElement for UIHeritageConfig {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         match self {
-            UIHeritageConfig::V1(uiheritage_config_v1) => uiheritage_config_v1.element(mapper),
+            UIHeritageConfig::V1(uiheritage_config_v1) => uiheritage_config_v1.element(m),
         }
     }
     fn place_holder() -> Self {
         Self::V1(UIHeritageConfigV1::place_holder())
-    }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
     }
 }
 impl FromRef<HeritageConfig> for UIHeritageConfig {
@@ -111,8 +103,9 @@ impl FromRef<HeritageConfig> for UIHeritageConfig {
 #[derive(Clone, PartialEq)]
 struct UIHeritageConfigV1(Vec<HeritageConfigurationsHistoryItemContentV1HeirProps>);
 impl LoadedElement for UIHeritageConfigV1 {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, _mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, _m: M) -> Element {
         let heir_count = self.0.len();
         rsx! {
             div { class: "collapse-content",
@@ -163,10 +156,10 @@ impl FromRef<HeritageConfig> for UIHeritageConfigV1 {
 
 #[derive(Debug, Clone, PartialEq)]
 struct UIExpirationBadge(UIBadge);
-impl ImplDirectIntoLoadedElementInputMarker for UIExpirationBadge {}
 impl LoadedElement for UIExpirationBadge {
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
-        self.0.element(mapper)
+    type Loader = SkeletonLoader;
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
+        self.0.element(m)
     }
 
     fn place_holder() -> Self {
@@ -212,16 +205,15 @@ impl From<(ExpirationStatus, bool)> for UIExpirationBadge {
 
 #[derive(Clone, PartialEq)]
 struct UIHeritageConfigurationsHistoryItem {
-    is_current: bool,
     expirationbadge: Option<UIExpirationBadge>,
     expiration: UITimestamp,
     heritage_config: UIHeritageConfig,
     associated_balance: Option<UIBtcAmount>,
 }
-impl ImplDirectIntoLoadedElementInputMarker for UIHeritageConfigurationsHistoryItem {}
 impl LoadedElement for UIHeritageConfigurationsHistoryItem {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         rsx! {
             div { class: "m-4",
                 div { class: "collapse collapse-plus bg-base-100 border border-base-300",
@@ -232,7 +224,7 @@ impl LoadedElement for UIHeritageConfigurationsHistoryItem {
                             div { class: "flex flex-col",
                                 div { class: "text-sm font-light", "Expiration" }
                                 div { class: "font-bold",
-                                    LoadedComponent::<UITimestamp> { input: mapper.map(self.expiration) }
+                                    LoadedComponent::<UITimestamp> { input: m.map(self.expiration) }
                                 }
                             }
                             div { class: "flex flex-col",
@@ -243,23 +235,74 @@ impl LoadedElement for UIHeritageConfigurationsHistoryItem {
                             }
                         }
                     }
-                    LoadedComponent::<UIHeritageConfig> { input: mapper.map(self.heritage_config) }
+                    LoadedComponent::<UIHeritageConfig> { input: m.map(self.heritage_config) }
                 }
             }
         }
     }
     fn place_holder() -> Self {
         Self {
-            is_current: true,
             expirationbadge: Some(UIExpirationBadge::place_holder()),
             expiration: UITimestamp::place_holder(),
             heritage_config: UIHeritageConfig::place_holder(),
             associated_balance: Some(UIBtcAmount::place_holder()),
         }
     }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
+}
+impl FromRef<(usize, ArcType<HeritageConfig>, Option<Option<SignedAmount>>)>
+    for UIHeritageConfigurationsHistoryItem
+{
+    fn from_ref(
+        (idx, heritage_config, associated_balance): &(
+            usize,
+            ArcType<HeritageConfig>,
+            Option<Option<SignedAmount>>,
+        ),
+    ) -> Self {
+        let idx = *idx;
+        let associated_balance = *associated_balance;
+
+        let expiration_ts = heritage_config
+            .iter_heir_configs()
+            .take(1)
+            .map(|hc| {
+                heritage_config
+                    .get_heritage_explorer(hc)
+                    .expect("cannot be None as we are iterating heir_configs")
+                    .get_spend_conditions()
+                    .get_spendable_timestamp()
+                    .expect("always present for heirs")
+            })
+            .next();
+
+        let expiration = expiration_ts
+            .map(|ts| UITimestamp::new_date_only(ts))
+            .unwrap_or(UITimestamp::never());
+
+        let now = timestamp_now();
+        let is_newest = idx == 0;
+        let status = if expiration_ts.is_some_and(|ts| ts < now) {
+            ExpirationStatus::Expired
+        } else if expiration_ts.is_some_and(|ts| ts < now + ExpirationStatus::SOON) {
+            ExpirationStatus::ExpireSoon
+        } else if is_newest {
+            ExpirationStatus::Current
+        } else {
+            ExpirationStatus::Outdated
+        };
+        let expirationbadge = associated_balance.map(|associated_balance| {
+            let with_balance = associated_balance.is_some_and(|b| b != SignedAmount::ZERO);
+            UIExpirationBadge::from((status, with_balance))
+        });
+        let associated_balance = associated_balance
+            .map(|associated_balance| UIBtcAmount::new(associated_balance, false));
+
+        Self {
+            expirationbadge,
+            expiration,
+            heritage_config: UIHeritageConfig::from_ref(heritage_config.as_ref()),
+            associated_balance,
+        }
     }
 }
 
@@ -306,62 +349,12 @@ pub(super) fn HeritageConfigurationsHistory() -> Element {
                         .iter()
                         .enumerate()
                         .map(|(idx, heritage_config)| {
-                            let expiration_ts = heritage_config
-                                .iter_heir_configs()
-                                .take(1)
-                                .map(|hc| {
-                                    heritage_config
-                                        .get_heritage_explorer(hc)
-                                        .expect("cannot be None as we are iterating heir_configs")
-                                        .get_spend_conditions()
-                                        .get_spendable_timestamp()
-                                        .expect("always present for heirs")
-                                })
-                                .next();
-
-                            let expiration = expiration_ts
-                                .map(|ts| UITimestamp::new_date_only(ts))
-                                .unwrap_or(UITimestamp::never());
-
-                            let associated_balance_amount = balance_by_heritage_config
-                                .as_ref()
-                                .map(|balance_by_heritage_config| {
-                                    balance_by_heritage_config.get(heritage_config)
-                                });
-                            let associated_balance =
-                                associated_balance_amount.map(|associated_balance_amount| {
-                                    UIBtcAmount::new(associated_balance_amount.cloned(), false)
-                                });
-
-                            let now = timestamp_now();
-                            let is_current = idx == 0;
-                            let status = if expiration_ts.is_some_and(|ts| ts < now) {
-                                ExpirationStatus::Expired
-                            } else if expiration_ts
-                                .is_some_and(|ts| ts < now + ExpirationStatus::SOON)
-                            {
-                                ExpirationStatus::ExpireSoon
-                            } else if is_current {
-                                ExpirationStatus::Current
-                            } else {
-                                ExpirationStatus::Outdated
-                            };
-                            let expirationbadge =
-                                associated_balance_amount.map(|associated_balance| {
-                                    let with_balance = associated_balance
-                                        .is_some_and(|b| *b != SignedAmount::ZERO);
-                                    UIExpirationBadge::from((status, with_balance))
-                                });
-
-                            UIHeritageConfigurationsHistoryItem {
-                                is_current,
-                                expirationbadge,
-                                expiration,
-                                heritage_config: UIHeritageConfig::from_ref(
-                                    heritage_config.as_ref(),
-                                ),
-                                associated_balance,
-                            }
+                            let associated_balance = balance_by_heritage_config.as_ref().map(
+                                |balance_by_heritage_config| {
+                                    balance_by_heritage_config.get(heritage_config).cloned()
+                                },
+                            );
+                            (idx, heritage_config.clone(), associated_balance)
                         })
                         .collect::<Vec<_>>()
                 });
@@ -410,7 +403,8 @@ fn HeritageConfigurationsHistoryItemContentV1Heir(
     let service_loading = service_heirs.read().is_none();
 
     let heirs = use_context::<Memo<HashMap<ArcType<HeirConfig>, CompositeHeir>>>();
-    let heir = heirs.read().get(&heir_config).cloned();
+    let heir = use_memo(move || heirs.read().get(&heir_config).cloned().map(|v| (v,)));
+
     let maturity_date = UITimestamp::new_date_only(maturity_ts);
 
     use_drop(|| log::debug!("HeritageConfigurationsHistoryItemContentV1Heir Dropped"));
@@ -426,9 +420,7 @@ fn HeritageConfigurationsHistoryItemContentV1Heir(
                 if service_loading {
                     LoadedComponent::<UIKnownHeir> { input: None::<UIKnownHeir>.into() }
                 } else {
-                    if let Some(heir) = heir {
-                        LoadedComponent::<UIKnownHeir> { input: heir.ref_into() }
-                    }
+                    LoadedComponent::<UIKnownHeir> { input: heir.into() }
                 }
                 div { class: "flex flex-row gap-8",
                     div { class: "flex flex-col",

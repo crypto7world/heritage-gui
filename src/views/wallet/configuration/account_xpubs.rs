@@ -1,18 +1,22 @@
-use btc_heritage_wallet::heritage_service_api_client::AccountXPubWithStatus;
-use btc_heritage_wallet::{AnyKeyProvider, Wallet};
+use btc_heritage_wallet::{
+    heritage_service_api_client::AccountXPubWithStatus, AnyKeyProvider, Wallet,
+};
 use dioxus::prelude::*;
 
-use crate::components::loaded::badge::UIBadge;
-use crate::components::loaded::{ComponentMapper, FromRef, LoadedComponent, LoadedElement};
-use crate::helper_hooks::use_resource_wallet_account_xpubs;
-use crate::utils::{ArcStr, ArcType};
+use crate::{
+    components::badge::UIBadge,
+    helper_hooks::use_resource_wallet_account_xpubs,
+    loaded::prelude::*,
+    utils::{ArcStr, ArcType},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct UIXPubStatusBadge(UIBadge);
 impl LoadedElement for UIXPubStatusBadge {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
-        self.0.element(mapper)
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
+        self.0.element(m)
     }
 
     fn place_holder() -> Self {
@@ -43,16 +47,17 @@ struct UIXPubRow {
     descriptor: ArcStr,
 }
 impl LoadedElement for UIXPubRow {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         rsx! {
             tr { key: "{self.descriptor}",
                 td {
-                    LoadedComponent { input: mapper.map(self.badge) }
+                    LoadedComponent { input: m.map(self.badge) }
                 }
                 td {
                     div { class: "font-mono text-sm",
-                        LoadedComponent { input: mapper.map(self.descriptor) }
+                        LoadedComponent { input: m.map(self.descriptor) }
                     }
                 }
             
@@ -64,10 +69,6 @@ impl LoadedElement for UIXPubRow {
             badge: UIXPubStatusBadge::place_holder(),
             descriptor: ArcStr::place_holder(),
         }
-    }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
     }
 }
 impl FromRef<AccountXPubWithStatus> for UIXPubRow {

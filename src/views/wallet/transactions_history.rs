@@ -6,21 +6,17 @@ use btc_heritage_wallet::{
 };
 
 use crate::{
-    components::{
-        loaded::{
-            balance::UIBtcAmount, timestamp::UITimestamp, ComponentMapper, LoadedComponent,
-            LoadedElement,
-        },
-        misc::Tooltip,
-    },
+    components::{balance::UIBtcAmount, misc::Tooltip, timestamp::UITimestamp},
+    loaded::prelude::*,
     utils::{amount_to_signed_string, ArcStr, ArcType},
 };
 
 #[derive(Debug, Clone, PartialEq)]
 struct UIBlockTime(Option<BlockTime>);
 impl LoadedElement for UIBlockTime {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         let tooltip_text = if let Some(BlockTime { height, .. }) = &self.0 {
             ArcStr::from(format!("Included in block #{height}"))
         } else {
@@ -34,7 +30,7 @@ impl LoadedElement for UIBlockTime {
 
         rsx! {
             Tooltip { tooltip_text,
-                LoadedComponent { input: mapper.map(timestamp) }
+                LoadedComponent { input: m.map(timestamp) }
             }
         }
     }
@@ -52,19 +48,20 @@ struct UITransactionsHistoryRow {
     balance_after: Option<UIBtcAmount>,
 }
 impl LoadedElement for UITransactionsHistoryRow {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         rsx! {
             tr {
                 td {
-                    LoadedComponent { input: mapper.map(self.confirmation_time) }
+                    LoadedComponent { input: m.map(self.confirmation_time) }
                 }
                 td {
-                    LoadedComponent { input: mapper.map(self.txid) }
+                    LoadedComponent { input: m.map(self.txid) }
                 }
                 td { class: "font-bold",
                     Tooltip { tooltip_text: self.amount_tt,
-                        LoadedComponent { input: mapper.map(self.amount) }
+                        LoadedComponent { input: m.map(self.amount) }
                     }
                 }
                 td { class: "font-semibold",
@@ -81,10 +78,6 @@ impl LoadedElement for UITransactionsHistoryRow {
             amount: UIBtcAmount::place_holder(),
             balance_after: Some(UIBtcAmount::place_holder()),
         }
-    }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
     }
 }
 

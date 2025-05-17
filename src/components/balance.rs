@@ -4,12 +4,7 @@ use btc_heritage_wallet::{
 };
 use dioxus::prelude::*;
 
-use crate::utils::amount_to_signed_string;
-
-use super::{
-    ComponentMapper, FromRef, ImplDirectIntoLoadedElementInputMarker, LoadedComponent,
-    LoadedElement,
-};
+use crate::{loaded::prelude::*, utils::amount_to_signed_string};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct UIBtcAmount {
@@ -21,11 +16,10 @@ impl UIBtcAmount {
         Self { amount, diff_style }
     }
 }
-impl ImplDirectIntoLoadedElementInputMarker for UIBtcAmount {}
-
 impl LoadedElement for UIBtcAmount {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, _mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, _m: M) -> Element {
         let (is_positive, is_negative, amount_s) = match self.amount {
             Some(signed_amount) => (
                 signed_amount.is_positive() || signed_amount == SignedAmount::ZERO,
@@ -125,24 +119,25 @@ impl FromRef<HeritageWalletMeta> for UIBalanceSummary {
     }
 }
 impl LoadedElement for UIBalanceSummary {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         rsx! {
             div { class: "text-base", "Balance" }
             div {
                 div { class: "text-3xl font-black",
-                    LoadedComponent::<UIBtcAmount> { input: mapper.map(self.0.balance) }
+                    LoadedComponent::<UIBtcAmount> { input: m.map(self.0.balance) }
                 }
                 div { class: "text-nowrap font-light text-sm",
                     "Current: "
                     span { class: "font-bold",
-                        LoadedComponent::<UIBtcAmount> { input: mapper.map(self.0.cur_balance) }
+                        LoadedComponent::<UIBtcAmount> { input: m.map(self.0.cur_balance) }
                     }
                 }
                 div { class: "text-nowrap font-light text-sm",
                     "Obsolete: "
                     span { class: "font-bold",
-                        LoadedComponent::<UIBtcAmount> { input: mapper.map(self.0.obs_balance) }
+                        LoadedComponent::<UIBtcAmount> { input: m.map(self.0.obs_balance) }
                     }
                 }
             }
@@ -150,10 +145,6 @@ impl LoadedElement for UIBalanceSummary {
     }
     fn place_holder() -> Self {
         Self(UIBalanceInner::place_holder())
-    }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
     }
 }
 
@@ -166,25 +157,26 @@ impl FromRef<WalletStatus> for UIWalletBalance {
 }
 
 impl LoadedElement for UIWalletBalance {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         rsx! {
             div { class: "card card-xl h-64 bg-base-100 shadow-sm p-6",
                 div { class: "card-title", "Balance" }
                 div { class: "card-body",
                     div { class: "text-4xl font-black",
-                        LoadedComponent::<UIBtcAmount> { input: mapper.map(self.0.balance) }
+                        LoadedComponent::<UIBtcAmount> { input: m.map(self.0.balance) }
                     }
                     div { class: "font-light text-sm",
                         "Current Heritage Config: "
                         span { class: "font-bold",
-                            LoadedComponent::<UIBtcAmount> { input: mapper.map(self.0.cur_balance) }
+                            LoadedComponent::<UIBtcAmount> { input: m.map(self.0.cur_balance) }
                         }
                     }
                     div { class: "font-light text-sm",
                         "Previous Heritage Config: "
                         span { class: "font-bold",
-                            LoadedComponent::<UIBtcAmount> { input: mapper.map(self.0.obs_balance) }
+                            LoadedComponent::<UIBtcAmount> { input: m.map(self.0.obs_balance) }
                         }
                     }
                 }
@@ -193,9 +185,5 @@ impl LoadedElement for UIWalletBalance {
     }
     fn place_holder() -> Self {
         Self(UIBalanceInner::place_holder())
-    }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
     }
 }

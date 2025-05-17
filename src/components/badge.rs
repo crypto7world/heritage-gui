@@ -1,11 +1,8 @@
 use btc_heritage_wallet::AnyKeyProvider;
 use dioxus::prelude::*;
 
-use crate::{components::misc::Tooltip, helper_hooks::CompositeHeir, utils::ArcStr};
-
-use super::{
-    ComponentMapper, FromRef, ImplDirectIntoLoadedElementInputMarker, LoadedComponent,
-    LoadedElement,
+use crate::{
+    components::misc::Tooltip, helper_hooks::CompositeHeir, loaded::prelude::*, utils::ArcStr,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -14,10 +11,10 @@ pub struct UIBadge {
     pub color_class: &'static str,
     pub tooltip: &'static str,
 }
-impl ImplDirectIntoLoadedElementInputMarker for UIBadge {}
 impl LoadedElement for UIBadge {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, _mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, _m: M) -> Element {
         rsx! {
             Tooltip { tooltip_text: ArcStr::from(self.tooltip),
                 div { class: "badge shadow-xl text-nowrap {self.color_class}", {self.text} }
@@ -60,15 +57,13 @@ impl ExternalDependencyStatus {
     }
 }
 
-impl ImplDirectIntoLoadedElementInputMarker for (OnlineWalletType, ExternalDependencyStatus) {}
-impl ImplDirectIntoLoadedElementInputMarker for (KeyProviderType, ExternalDependencyStatus) {}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct UIKeyProviderBadge(UIBadge);
 impl LoadedElement for UIKeyProviderBadge {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
-        self.0.element(mapper)
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
+        self.0.element(m)
     }
 
     fn place_holder() -> Self {
@@ -102,9 +97,10 @@ impl FromRef<(KeyProviderType, ExternalDependencyStatus)> for UIKeyProviderBadge
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct UIOnlineWalletBadge(UIBadge);
 impl LoadedElement for UIOnlineWalletBadge {
+    type Loader = SkeletonLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
-        self.0.element(mapper)
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
+        self.0.element(m)
     }
 
     fn place_holder() -> Self {
@@ -154,21 +150,18 @@ const HEIR_LOCAL_SEED_BADGE: UIBadge = UIBadge {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UIHeirBadges(Vec<UIBadge>);
 impl LoadedElement for UIHeirBadges {
+    type Loader = TransparentLoader;
     #[inline(always)]
-    fn element<CM: ComponentMapper>(self, mapper: CM) -> Element {
+    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
         rsx! {
             for badge in self.0 {
-                LoadedComponent { input: mapper.map(badge) }
+                LoadedComponent { input: m.map(badge) }
             }
         }
     }
 
     fn place_holder() -> Self {
         Self(vec![UIBadge::place_holder(); 2].into())
-    }
-    #[inline(always)]
-    fn visible_place_holder() -> bool {
-        true
     }
 }
 impl FromRef<CompositeHeir> for UIHeirBadges {
