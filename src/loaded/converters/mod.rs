@@ -75,7 +75,7 @@ impl<T: Clone> FromRef<T> for T {
 /// // Using the UserViewModel from the FromRef example
 /// fn render_user(data: &UserData) -> Element {
 ///     let view_model: UserViewModel = data.ref_into();
-///     
+///
 ///     rsx! {
 ///         div {
 ///             span { {view_model.display_name} }

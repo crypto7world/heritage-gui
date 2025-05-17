@@ -15,10 +15,7 @@ use crate::{
         balance::UIWalletBalance,
         timestamp::LastSyncSpan,
     },
-    helper_hooks::{
-        self, use_memo_heirs, use_memo_keyprovider_status, use_memo_online_status,
-        use_resource_database_heirs, use_resource_service_heirs,
-    },
+    helper_hooks,
     loaded::LoadedComponent,
     utils::{ArcStr, ArcType},
     Route,
@@ -38,9 +35,9 @@ pub fn WalletWrapperLayout(wallet_name: ArcStr) -> Element {
 
     let wallet_heritage_configs = helper_hooks::use_resource_wallet_heritage_configs(wallet);
 
-    let database_heirs = use_resource_database_heirs();
-    let service_heirs = use_resource_service_heirs();
-    let heirs = use_memo_heirs(database_heirs, service_heirs);
+    let database_heirs = helper_hooks::use_resource_database_heirs();
+    let service_heirs = helper_hooks::use_resource_service_heirs();
+    let heirs = helper_hooks::use_memo_heirs(database_heirs, service_heirs);
 
     // Provide the wallet resources to all child that may want it
     use_context_provider(|| wallet);
@@ -48,8 +45,9 @@ pub fn WalletWrapperLayout(wallet_name: ArcStr) -> Element {
     use_context_provider(|| wallet_transactions);
     use_context_provider(|| wallet_utxos);
     use_context_provider(|| wallet_heritage_configs);
-    use_context_provider(|| heirs);
+
     use_context_provider(|| service_heirs);
+    use_context_provider(|| heirs);
 
     use_drop(|| log::debug!("WalletWrapperView Dropped"));
     rsx! {
@@ -67,8 +65,8 @@ pub fn WalletView(wallet_name: ArcStr) -> Element {
     let wallet_status = use_context::<Resource<Result<WalletStatus, String>>>();
 
     let fingerprint = helper_hooks::use_memo_fingerprint(wallet);
-    let keyprovider_status = use_memo_keyprovider_status(wallet, wallet_status);
-    let online_status = use_memo_online_status(wallet, wallet_status);
+    let keyprovider_status = helper_hooks::use_memo_keyprovider_status(wallet, wallet_status);
+    let online_status = helper_hooks::use_memo_online_status(wallet, wallet_status);
 
     use_drop(|| log::debug!("WalletView Dropped"));
 

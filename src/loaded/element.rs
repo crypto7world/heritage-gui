@@ -151,11 +151,12 @@ loaded_iter!(crate::utils::ArcType<[T]>, clone);
 ///     }
 /// }
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum Display<T> {
     /// Display the contained value
     Show(T),
     /// Display nothing
+    #[default]
     None,
 }
 impl<T: LoadedElement> LoadedElement for Display<T> {
@@ -177,7 +178,7 @@ impl<T> Display<T> {
     /// Maps the contained value using the provided function.
     ///
     /// This is similar to `Option::map`. If the `Display` is `Show`, it applies the function to the
-    /// contained value and returns a new `Display::Show` with the result. If it's `None`, it returns 
+    /// contained value and returns a new `Display::Show` with the result. If it's `None`, it returns
     /// `Display::None`.
     ///
     /// # Parameters

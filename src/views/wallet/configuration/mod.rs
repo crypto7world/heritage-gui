@@ -1,9 +1,11 @@
-use account_xpubs::AccountXPubConfig;
 use dioxus::prelude::*;
 
 mod account_xpubs;
+mod current_heritage_config;
 
+use account_xpubs::AccountXPubConfig;
 use btc_heritage_wallet::Wallet;
+use current_heritage_config::CurrentHeritageConfig;
 
 use crate::{helper_hooks, utils::ArcStr, Route};
 
@@ -43,7 +45,7 @@ pub fn WalletConfigurationView(wallet_name: ArcStr) -> Element {
                     }
                 }
             },
-            div { "Now I need content...." }
+            CurrentHeritageConfig {}
             AccountXPubConfig {}
         }
     }

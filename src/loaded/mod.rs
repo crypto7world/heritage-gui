@@ -1,7 +1,7 @@
 //! # Loaded Module
-//! 
+//!
 //! A comprehensive framework for handling UI component loading states in a declarative way.
-//! 
+//!
 //! This module provides a structured approach to represent components that can be in different loading
 //! states: loading, loaded successfully, or error. It helps in creating consistent UI experiences
 //! when dealing with asynchronous data loading, without having to manually handle loading states
@@ -26,13 +26,13 @@
 //!
 //! impl LoadedElement for MyComponent {
 //!     type Loader = SkeletonLoader;
-//!     
+//!
 //!     fn element<M: LoadedComponentInputMapper>(self, _m: M) -> Element {
 //!         rsx! {
 //!             div { class: "my-component", {self.text} }
 //!         }
 //!     }
-//!     
+//!
 //!     fn place_holder() -> Self {
 //!         Self { text: "Loading...".to_string() }
 //!     }
@@ -57,7 +57,7 @@ pub mod mapper;
 /// ```
 pub mod prelude {
     pub use super::converters::{FromRef, RefInto};
-    pub use super::element::{Display, LoadedElement};
+    pub use super::element::{Display, Display::Show, LoadedElement};
     pub use super::loaders::{SkeletonLoader, TransparentLoader};
     pub use super::mapper::LoadedComponentInputMapper;
     pub use super::{AlwaysLoadedComponent, LoadedComponent};

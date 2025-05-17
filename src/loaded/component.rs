@@ -45,7 +45,7 @@ pub enum LoadedComponentInput<T: LoadedElement + Clone + PartialEq> {
 /// `LoadedComponentInput` and renders the appropriate UI based on the loading state:
 /// - For loading state: displays a placeholder with the component's configured loader
 /// - For success state: displays the actual component
-/// - For error state: logs the error and displays a placeholder with error styling
+/// - For error state: logs the error and displays a placeholder with the component's configured loader
 ///
 /// # Type Parameters
 ///

@@ -1,157 +1,98 @@
 use dioxus::prelude::*;
 
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 
 use btc_heritage_wallet::{
     bitcoin::SignedAmount,
-    btc_heritage::{
-        heritage_config::HeritageExplorerTrait, utils::timestamp_now, HeirConfig, HeritageConfig,
-        HeritageConfigVersion,
-    },
-    heritage_service_api_client::{Heir, HeritageUtxo},
+    btc_heritage::{heritage_config::HeritageExplorerTrait, utils::timestamp_now, HeritageConfig},
+    heritage_service_api_client::HeritageUtxo,
 };
 
 use crate::{
     components::{
-        badge::{UIBadge, UIHeirBadges},
-        balance::UIBtcAmount,
+        badge::UIBadge, balance::UIBtcAmount, heritage_configuration::UIHeritageConfig,
         timestamp::UITimestamp,
     },
-    helper_hooks::CompositeHeir,
     loaded::prelude::*,
-    utils::{ArcStr, ArcType},
+    utils::ArcType,
 };
 
-#[derive(Debug, Clone, PartialEq)]
-struct UIKnownHeir {
-    name: ArcStr,
-    email: Option<ArcStr>,
-    badges: UIHeirBadges,
-}
-impl LoadedElement for UIKnownHeir {
-    type Loader = TransparentLoader;
-    #[inline(always)]
-    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
-        rsx! {
-            div { class: "flex flex-row gap-4",
-                div {
-                    span { class: "text-xl font-bold mr-2",
-                        LoadedComponent { input: m.map(self.name) }
-                    }
-                    if let Some(email) = self.email {
-                        span { class: "text-base font-semibold", "({email})" }
-                    }
-                }
-                div { class: "grow" }
-                LoadedComponent { input: m.map(self.badges) }
+#[component]
+pub(super) fn HeritageConfigurationsHistory() -> Element {
+    log::debug!("HeritageConfigurationsHistory Rendered");
+
+    let wallet_heritage_configs = use_context::<Resource<ArcType<[ArcType<HeritageConfig>]>>>();
+
+    let wallet_utxos = use_context::<Resource<ArcType<[HeritageUtxo]>>>();
+    let balance_by_heritage_config = use_memo(move || {
+        log::debug!("use_memo_utxo_by_heritage_config - start compute");
+
+        let balance_by_heritage_config = if let Some(utxos) = wallet_utxos.cloned() {
+            let mut balance_by_heritage_config = HashMap::new();
+            for utxo in utxos.iter() {
+                let heritage_config = utxo.heritage_config.clone();
+                let utxo_amount = utxo
+                    .amount
+                    .to_signed()
+                    .expect("UTXO amount cannot be bigger than MAX_MONEY");
+                balance_by_heritage_config
+                    .entry(heritage_config)
+                    .and_modify(|balance| *balance += utxo_amount)
+                    .or_insert(utxo_amount);
             }
-        }
-    }
-    fn place_holder() -> Self {
-        Self {
-            name: ArcStr::place_holder(),
-            email: None,
-            badges: UIHeirBadges::place_holder(),
-        }
-    }
-}
-impl FromRef<CompositeHeir> for UIKnownHeir {
-    fn from_ref(composite_heir: &CompositeHeir) -> Self {
-        let badges = UIHeirBadges::from_ref(composite_heir);
-        let CompositeHeir {
-            name, service_heir, ..
-        } = composite_heir;
+            Some(balance_by_heritage_config)
+        } else {
+            None
+        };
 
-        let email = service_heir
-            .as_ref()
-            .map(|service_heir| ArcStr::from(service_heir.main_contact.email.to_string()));
+        log::debug!("use_memo_utxo_by_heritage_config - finish compute");
+        balance_by_heritage_config
+    });
 
-        Self {
-            name: name.clone(),
-            email,
-            badges,
-        }
-    }
-}
+    let heritage_configurations_history_items = use_memo(move || {
+        log::debug!("use_memo_heritage_configurations_history_items - start compute");
+        let balance_by_heritage_config = &*balance_by_heritage_config.read();
+        let heritage_configurations_history_items =
+            wallet_heritage_configs
+                .cloned()
+                .map(|wallet_heritage_configs| {
+                    wallet_heritage_configs
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, heritage_config)| {
+                            let associated_balance = balance_by_heritage_config.as_ref().map(
+                                |balance_by_heritage_config| {
+                                    balance_by_heritage_config.get(heritage_config).cloned()
+                                },
+                            );
+                            (idx, heritage_config.clone(), associated_balance)
+                        })
+                        .collect::<Vec<_>>()
+                });
+        log::debug!("use_memo_heritage_configurations_history_items - finish compute");
+        heritage_configurations_history_items
+    });
 
-#[derive(Clone, PartialEq)]
-enum UIHeritageConfig {
-    V1(UIHeritageConfigV1),
-}
-impl LoadedElement for UIHeritageConfig {
-    type Loader = TransparentLoader;
-    #[inline(always)]
-    fn element<M: LoadedComponentInputMapper>(self, m: M) -> Element {
-        match self {
-            UIHeritageConfig::V1(uiheritage_config_v1) => uiheritage_config_v1.element(m),
-        }
-    }
-    fn place_holder() -> Self {
-        Self::V1(UIHeritageConfigV1::place_holder())
-    }
-}
-impl FromRef<HeritageConfig> for UIHeritageConfig {
-    fn from_ref(heritage_configuration: &HeritageConfig) -> Self {
-        match heritage_configuration.version() {
-            HeritageConfigVersion::V1 => {
-                Self::V1(UIHeritageConfigV1::from_ref(heritage_configuration))
-            }
+    use_drop(|| log::debug!("HeritageConfigurationsHistory Dropped"));
+    rsx! {
+        div { class: "overflow-x-auto rounded-box border border-base-content/5 bg-base-100 m-4",
+            h2 { class: "text-h2 font-bold p-4", "Heritage Configurations History" }
+            LoadedComponent::<Vec<UIHeritageConfigurationsHistoryItem>> { input: heritage_configurations_history_items.into() }
         }
     }
 }
 
-#[derive(Clone, PartialEq)]
-struct UIHeritageConfigV1(Vec<HeritageConfigurationsHistoryItemContentV1HeirProps>);
-impl LoadedElement for UIHeritageConfigV1 {
-    type Loader = SkeletonLoader;
-    #[inline(always)]
-    fn element<M: LoadedComponentInputMapper>(self, _m: M) -> Element {
-        let heir_count = self.0.len();
-        rsx! {
-            div { class: "collapse-content",
-                div { class: "text-lg font-bold",
-                    "{heir_count} heir"
-                    if heir_count > 1 {
-                        "s"
-                    }
-                }
-                ul { class: "timeline timeline-vertical timeline-compact",
-                    for props in self.0 {
-                        HeritageConfigurationsHistoryItemContentV1Heir { ..props }
-                    }
-                }
-            }
-        }
-    }
-    fn place_holder() -> Self {
-        Self(vec![])
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExpirationStatus {
+    Current,
+    Outdated,
+    ExpireSoon,
+    Expired,
 }
-impl FromRef<HeritageConfig> for UIHeritageConfigV1 {
-    fn from_ref(heritage_configuration: &HeritageConfig) -> Self {
-        let heritage_v1 = heritage_configuration
-            .heritage_config_v1()
-            .expect("verified it is v1");
-
-        Self(
-            heritage_v1
-                .iter_heritages()
-                .enumerate()
-                .map(|(i, h)| {
-                    let heir_config = ArcType::from(h.heir_config.clone());
-                    let locked_for_days = h.time_lock.as_u16();
-                    let maturity_ts =
-                        heritage_v1.reference_timestamp.as_u64() + h.time_lock.as_seconds();
-                    HeritageConfigurationsHistoryItemContentV1HeirProps {
-                        position: i + 1,
-                        heir_config,
-                        locked_for_days,
-                        maturity_ts,
-                    }
-                })
-                .collect(),
-        )
-    }
+impl ExpirationStatus {
+    // SOON = 1 month
+    // 30 days x 24 hours x 60 mins x 60 secs
+    const SOON: u64 = 30 * 24 * 60 * 60;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -235,7 +176,9 @@ impl LoadedElement for UIHeritageConfigurationsHistoryItem {
                             }
                         }
                     }
-                    LoadedComponent::<UIHeritageConfig> { input: m.map(self.heritage_config) }
+                    div { class: "collapse-content",
+                        LoadedComponent::<UIHeritageConfig> { input: m.map(self.heritage_config) }
+                    }
                 }
             }
         }
@@ -302,152 +245,6 @@ impl FromRef<(usize, ArcType<HeritageConfig>, Option<Option<SignedAmount>>)>
             expiration,
             heritage_config: UIHeritageConfig::from_ref(heritage_config.as_ref()),
             associated_balance,
-        }
-    }
-}
-
-#[component]
-pub(super) fn HeritageConfigurationsHistory() -> Element {
-    log::debug!("HeritageConfigurationsHistory Rendered");
-
-    let wallet_heritage_configs = use_context::<Resource<ArcType<[ArcType<HeritageConfig>]>>>();
-
-    let wallet_utxos = use_context::<Resource<ArcType<[HeritageUtxo]>>>();
-    let balance_by_heritage_config = use_memo(move || {
-        log::debug!("use_memo_utxo_by_heritage_config - start compute");
-
-        let balance_by_heritage_config = if let Some(utxos) = wallet_utxos.cloned() {
-            let mut balance_by_heritage_config = HashMap::new();
-            for utxo in utxos.iter() {
-                let heritage_config = utxo.heritage_config.clone();
-                let utxo_amount = utxo
-                    .amount
-                    .to_signed()
-                    .expect("UTXO amount cannot be bigger than MAX_MONEY");
-                balance_by_heritage_config
-                    .entry(heritage_config)
-                    .and_modify(|balance| *balance += utxo_amount)
-                    .or_insert(utxo_amount);
-            }
-            Some(balance_by_heritage_config)
-        } else {
-            None
-        };
-
-        log::debug!("use_memo_utxo_by_heritage_config - finish compute");
-        balance_by_heritage_config
-    });
-
-    let heritage_configurations_history_items = use_memo(move || {
-        log::debug!("use_memo_heritage_configurations_history_items - start compute");
-        let balance_by_heritage_config = &*balance_by_heritage_config.read();
-        let heritage_configurations_history_items =
-            wallet_heritage_configs
-                .cloned()
-                .map(|wallet_heritage_configs| {
-                    wallet_heritage_configs
-                        .iter()
-                        .enumerate()
-                        .map(|(idx, heritage_config)| {
-                            let associated_balance = balance_by_heritage_config.as_ref().map(
-                                |balance_by_heritage_config| {
-                                    balance_by_heritage_config.get(heritage_config).cloned()
-                                },
-                            );
-                            (idx, heritage_config.clone(), associated_balance)
-                        })
-                        .collect::<Vec<_>>()
-                });
-        log::debug!("use_memo_heritage_configurations_history_items - finish compute");
-        heritage_configurations_history_items
-    });
-
-    use_drop(|| log::debug!("HeritageConfigurationsHistory Dropped"));
-    rsx! {
-        div { class: "overflow-x-auto rounded-box border border-base-content/5 bg-base-100 m-4",
-            h2 { class: "text-h2 font-bold p-4", "Heritage Configurations History" }
-            LoadedComponent::<Vec<UIHeritageConfigurationsHistoryItem>> { input: heritage_configurations_history_items.into() }
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ExpirationStatus {
-    Current,
-    Outdated,
-    ExpireSoon,
-    Expired,
-}
-impl ExpirationStatus {
-    // SOON = 1 month
-    // 30 days x 24 hours x 60 mins x 60 secs
-    const SOON: u64 = 30 * 24 * 60 * 60;
-}
-
-#[component]
-fn HeritageConfigurationsHistoryItemContentV1Heir(
-    position: usize,
-    heir_config: ArcType<HeirConfig>,
-    locked_for_days: u16,
-    maturity_ts: u64,
-) -> Element {
-    log::debug!("HeritageConfigurationsHistoryItemContentV1Heir Rendered");
-
-    let heir_config_type = match heir_config.deref() {
-        HeirConfig::SingleHeirPubkey(_) => "Public Key",
-        HeirConfig::HeirXPubkey(_) => "Extended Public Key",
-    };
-    let heir_config_fg = heir_config.fingerprint();
-
-    let service_heirs = use_context::<Resource<Vec<ArcType<Heir>>>>();
-
-    let heirs = use_context::<Memo<HashMap<ArcType<HeirConfig>, CompositeHeir>>>();
-    let heir = use_memo(move || {
-        service_heirs.read().as_ref().map(|_| {
-            heirs
-                .read()
-                .get(&heir_config)
-                .cloned()
-                .map(Display::Show)
-                .unwrap_or(Display::None)
-        })
-    });
-
-    let maturity_date = UITimestamp::new_date_only(maturity_ts);
-
-    use_drop(|| log::debug!("HeritageConfigurationsHistoryItemContentV1Heir Dropped"));
-    rsx! {
-        li { class: "w-fit group",
-            hr { class: "bg-base-content" }
-            div { class: "timeline-middle",
-                div { class: "bg-primary rounded-full aspect-square content-center",
-                    span { class: "m-1 font-bold", "#{position}" }
-                }
-            }
-            div { class: "timeline-end timeline-box flex flex-col",
-                LoadedComponent::<Display<UIKnownHeir>> { input: heir.into() }
-                div { class: "flex flex-row gap-8",
-                    div { class: "flex flex-col",
-                        div { class: "font-light", "Key Type" }
-                        div { class: "text-lg font-bold", "{heir_config_type}" }
-                    }
-                    div { class: "flex flex-col",
-                        div { class: "font-light", "Key Fingerprint" }
-                        div { class: "text-lg font-bold", "{heir_config_fg}" }
-                    }
-                    div { class: "flex flex-col",
-                        div { class: "font-light", "Locked for" }
-                        div { class: "text-lg font-bold", "{locked_for_days} days" }
-                    }
-                    div { class: "flex flex-col",
-                        div { class: "font-light", "Maturity Date" }
-                        div { class: "text-lg font-bold",
-                            AlwaysLoadedComponent { input: maturity_date }
-                        }
-                    }
-                }
-            }
-            hr { class: "bg-base-content group-last:hidden" }
         }
     }
 }

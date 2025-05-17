@@ -141,14 +141,10 @@ pub(super) fn AccountXPubConfig() -> Element {
 
             // Action buttons
             div { class: "flex gap-4 mt-4",
-                button { class: "btn btn-primary btn-lg", onclick: add_xpubs, "Add XPubs" }
+                button { class: "btn btn-primary", onclick: add_xpubs, "Add XPubs" }
 
                 if *can_autofeed.read() {
-                    button {
-                        class: "btn btn-secondary btn-lg",
-                        onclick: autofeed_xpubs,
-                        "Autofeed 20 more"
-                    }
+                    button { class: "btn btn-secondary", onclick: autofeed_xpubs, "Autofeed 20 more" }
                 }
             }
         }
