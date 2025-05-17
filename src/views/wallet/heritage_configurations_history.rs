@@ -400,10 +400,18 @@ fn HeritageConfigurationsHistoryItemContentV1Heir(
     let heir_config_fg = heir_config.fingerprint();
 
     let service_heirs = use_context::<Resource<Vec<ArcType<Heir>>>>();
-    let service_loading = service_heirs.read().is_none();
 
     let heirs = use_context::<Memo<HashMap<ArcType<HeirConfig>, CompositeHeir>>>();
-    let heir = use_memo(move || heirs.read().get(&heir_config).cloned().map(|v| (v,)));
+    let heir = use_memo(move || {
+        service_heirs.read().as_ref().map(|_| {
+            heirs
+                .read()
+                .get(&heir_config)
+                .cloned()
+                .map(Display::Show)
+                .unwrap_or(Display::None)
+        })
+    });
 
     let maturity_date = UITimestamp::new_date_only(maturity_ts);
 
@@ -417,11 +425,7 @@ fn HeritageConfigurationsHistoryItemContentV1Heir(
                 }
             }
             div { class: "timeline-end timeline-box flex flex-col",
-                if service_loading {
-                    LoadedComponent::<UIKnownHeir> { input: None::<UIKnownHeir>.into() }
-                } else {
-                    LoadedComponent::<UIKnownHeir> { input: heir.into() }
-                }
+                LoadedComponent::<Display<UIKnownHeir>> { input: heir.into() }
                 div { class: "flex flex-row gap-8",
                     div { class: "flex flex-col",
                         div { class: "font-light", "Key Type" }

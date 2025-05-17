@@ -6,7 +6,7 @@ pub mod mapper;
 
 pub mod prelude {
     pub use super::converters::{FromRef, RefInto};
-    pub use super::element::LoadedElement;
+    pub use super::element::{Display, LoadedElement};
     pub use super::loaders::{SkeletonLoader, TransparentLoader};
     pub use super::mapper::LoadedComponentInputMapper;
     pub use super::{AlwaysLoadedComponent, LoadedComponent};

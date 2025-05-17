@@ -1,4 +1,4 @@
-use crate::utils::ArcType;
+use crate::{loaded::element::Display, utils::ArcType};
 
 use super::{
     super::{component::LoadedComponentInput, element::LoadedElement},
@@ -56,9 +56,16 @@ where
     }
 }
 
-impl<T: LoadedElement, U: RefInto<T>> FromRef<(U,)> for LoadedComponentInput<T> {
+impl<T: LoadedElement, U: RefInto<T>> FromRef<Display<U>> for LoadedComponentInput<Display<T>> {
     #[inline(always)]
-    fn from_ref(value: &(U,)) -> Self {
-        Self::LoadedSuccess(value.0.ref_into())
+    fn from_ref(value: &Display<U>) -> Self {
+        Self::LoadedSuccess(value.as_ref().map(|u| u.ref_into()))
     }
 }
+
+// impl<T: LoadedElement, U: RefInto<T>> FromRef<(U,)> for LoadedComponentInput<T> {
+//     #[inline(always)]
+//     fn from_ref(value: &(U,)) -> Self {
+//         Self::LoadedSuccess(value.0.ref_into())
+//     }
+// }
