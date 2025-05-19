@@ -67,7 +67,7 @@ fn WalletItem(wallet_name: ArcStr) -> Element {
 
     let navigator = use_navigator();
 
-    let wallet = helper_hooks::use_resource_wallet(wallet_name.clone());
+    let wallet = helper_hooks::use_async_wallet(wallet_name.clone());
     let wallet_status = helper_hooks::use_resource_wallet_status(wallet);
     let fingerprint = helper_hooks::use_memo_fingerprint(wallet);
     // let last_synced = helper_hooks::use_memo_last_sync(wallet_status);

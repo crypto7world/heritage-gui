@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use btc_heritage_wallet::heritage_service_api_client::DeviceAuthorizationResponse;
 
 use crate::{
-    components::misc::Modal,
+    components::{alerts::AlertsContainer, misc::Modal},
     state_management::{use_service_client_service, CONNECTED_USER},
     Route, DARK_MODE,
 };
@@ -15,6 +15,7 @@ pub fn MainLayout() -> Element {
     use_drop(|| log::debug!("MainLayout Dropped"));
 
     rsx! {
+        AlertsContainer {}
         div { class: "relative min-h-dvh",
             header { class: "bg-base-100 fixed top-0 w-full z-10 shadow-lg shadow-base-content/10",
                 NavBar {}

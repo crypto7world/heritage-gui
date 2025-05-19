@@ -7,7 +7,11 @@ use account_xpubs::AccountXPubConfig;
 use btc_heritage_wallet::Wallet;
 use current_heritage_config::CurrentHeritageConfig;
 
-use crate::{helper_hooks, utils::ArcStr, Route};
+use crate::{
+    helper_hooks::{self, async_init::AsyncSignal},
+    utils::ArcStr,
+    Route,
+};
 
 #[component]
 pub fn WalletConfigurationView(wallet_name: ArcStr) -> Element {
@@ -15,7 +19,7 @@ pub fn WalletConfigurationView(wallet_name: ArcStr) -> Element {
 
     let navigator = use_navigator();
 
-    let wallet = use_context::<Resource<Wallet>>();
+    let wallet = use_context::<AsyncSignal<Wallet>>();
 
     let fingerprint = helper_hooks::use_memo_fingerprint(wallet);
 

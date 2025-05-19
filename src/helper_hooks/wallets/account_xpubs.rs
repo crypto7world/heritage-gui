@@ -5,13 +5,14 @@ use btc_heritage_wallet::{
 };
 
 use crate::{
+    helper_hooks::async_init::AsyncSignal,
     state_management,
-    utils::{wait_resource, ArcType},
+    utils::{wait_async_signal, ArcType},
 };
 
 /// Resource hook for fetching account extended public keys for a wallet
 pub fn use_resource_wallet_account_xpubs(
-    wallet: Resource<Wallet>,
+    wallet: AsyncSignal<Wallet>,
 ) -> Resource<ArcType<[AccountXPubWithStatus]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_account_xpubs - start");
@@ -19,10 +20,10 @@ pub fn use_resource_wallet_account_xpubs(
         // Subscribe to the service connection
         let _ = *state_management::CONNECTED_USER.read();
 
-        log::debug!("use_resource_wallet_account_xpubs - waiting use_resource_wallet...");
+        log::debug!("use_resource_wallet_account_xpubs - waiting use_async_wallet...");
         // Wait for wallet to finish
-        wait_resource(wallet).await;
-        log::debug!("use_resource_wallet_account_xpubs - use_resource_wallet acquired");
+        wait_async_signal(wallet).await;
+        log::debug!("use_resource_wallet_account_xpubs - use_async_wallet acquired");
 
         let account_xpubs = if let Some(ref wallet) = *wallet.read() {
             let wallet_name = wallet.name().to_owned();

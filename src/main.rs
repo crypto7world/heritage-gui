@@ -64,7 +64,7 @@ fn App() -> Element {
         document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
 
-        div { id: "app", class: if DARK_MODE() { "dark" }, Router::<Route> {} }
+        div { id: "app", class: "text-base", class: if DARK_MODE() { "dark" }, Router::<Route> {} }
     }
 }
 

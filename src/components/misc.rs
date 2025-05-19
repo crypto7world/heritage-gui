@@ -30,7 +30,7 @@ pub fn Modal(
             checked: is_open(),
         }
         div {
-            class: "modal",
+            class: "modal z-40",
             role: "dialog",
             onclick: move |event| {
                 event.stop_propagation();
@@ -45,7 +45,9 @@ pub fn Modal(
                     *is_open.write() = false;
                 }
             },
-            div { class: "modal-box max-w-max {classes}", {children} }
+            div { class: "modal-box max-w-max p-0 {classes}",
+                div { class: "p-6 w-fit", {children} }
+            }
         }
     }
 }

@@ -53,7 +53,7 @@ impl FromRef<CompositeHeir> for UIKnownHeir {
 
         let email = service_heir
             .as_ref()
-            .map(|service_heir| ArcStr::from(service_heir.main_contact.email.to_string()));
+            .map(|service_heir| ArcStr::from(service_heir.main_contact.email.as_str()));
 
         Self {
             name: name.clone(),

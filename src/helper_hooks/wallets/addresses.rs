@@ -5,8 +5,9 @@ use btc_heritage_wallet::{
 };
 
 use crate::{
+    helper_hooks::async_init::AsyncSignal,
     state_management,
-    utils::{wait_resource, ArcType},
+    utils::{wait_async_signal, ArcType},
 };
 
 /// Resource hook for retrieving all addresses associated with a wallet
@@ -18,7 +19,7 @@ use crate::{
 /// let addresses = use_resource_wallet_addresses(wallet);
 /// ```
 pub fn use_resource_wallet_addresses(
-    wallet: Resource<Wallet>,
+    wallet: AsyncSignal<Wallet>,
 ) -> Resource<ArcType<[WalletAddress]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_addresses - start");
@@ -26,10 +27,10 @@ pub fn use_resource_wallet_addresses(
         // Subscribe to the service connection
         let _ = *state_management::CONNECTED_USER.read();
 
-        log::debug!("use_resource_wallet_addresses - waiting use_resource_wallet...");
+        log::debug!("use_resource_wallet_addresses - waiting use_async_wallet...");
         // Wait for wallet to finish
-        wait_resource(wallet).await;
-        log::debug!("use_resource_wallet_addresses - use_resource_wallet acquired");
+        wait_async_signal(wallet).await;
+        log::debug!("use_resource_wallet_addresses - use_async_wallet acquired");
 
         let wallet_addresses = if let Some(ref wallet) = *wallet.read() {
             let wallet_name = wallet.name().to_owned();
@@ -61,17 +62,17 @@ pub fn use_resource_wallet_addresses(
 /// let wallet = use_resource_wallet("my_wallet".into());
 /// let address = use_resource_wallet_address(wallet);
 /// ```
-pub fn use_resource_wallet_address(wallet: Resource<Wallet>) -> Resource<Option<String>> {
+pub fn use_resource_wallet_address(wallet: AsyncSignal<Wallet>) -> Resource<Option<String>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_address - start");
 
         // Subscribe to the service connection
         let _ = *state_management::CONNECTED_USER.read();
 
-        log::debug!("use_resource_wallet_address - waiting use_resource_wallet...");
+        log::debug!("use_resource_wallet_address - waiting use_async_wallet...");
         // Wait for wallet to finish
-        wait_resource(wallet).await;
-        log::debug!("use_resource_wallet_address - use_resource_wallet acquired");
+        wait_async_signal(wallet).await;
+        log::debug!("use_resource_wallet_address - use_async_wallet acquired");
 
         let wallet_address = if let Some(ref wallet) = *wallet.read() {
             let wallet_name = wallet.name().to_owned();

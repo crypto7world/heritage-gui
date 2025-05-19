@@ -26,6 +26,8 @@ use crate::{
     utils::{ArcStr, ArcType},
 };
 
+use super::async_init::{use_async_init, AsyncSignal};
+
 pub fn use_resource_wallet_names() -> Resource<Vec<ArcStr>> {
     let database_service = use_database_service();
     use_resource(move || async move {
@@ -38,18 +40,18 @@ pub fn use_resource_wallet_names() -> Resource<Vec<ArcStr>> {
     })
 }
 
-pub fn use_resource_wallet(name: ArcStr) -> Resource<Wallet> {
+pub fn use_async_wallet(name: ArcStr) -> AsyncSignal<Wallet> {
     let database_service = use_database_service();
-    use_resource(move || {
+    use_async_init(move || {
         let name = name.clone();
         async move {
-            log::debug!("use_resource_wallet - start");
+            log::debug!("use_async_wallet - start");
             let wallet = state_management::get_wallet(database_service, name)
                 .await
                 .expect(
                     "wallet should exist and I have nothing smart to do with this error anyway",
                 );
-            log::debug!("use_resource_wallet - loaded");
+            log::debug!("use_async_wallet - loaded");
             wallet
         }
     })

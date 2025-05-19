@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::badge::UIBadge,
-    helper_hooks::use_resource_wallet_account_xpubs,
+    helper_hooks::{async_init::AsyncSignal, use_resource_wallet_account_xpubs},
     loaded::prelude::*,
     utils::{ArcStr, ArcType},
 };
@@ -96,7 +96,7 @@ impl FromRef<AccountXPubWithStatus> for UIXPubRow {
 /// ```
 #[component]
 pub(super) fn AccountXPubConfig() -> Element {
-    let wallet = use_context::<Resource<Wallet>>();
+    let wallet = use_context::<AsyncSignal<Wallet>>();
     let account_xpubs = use_resource_wallet_account_xpubs(wallet);
 
     let can_autofeed = use_memo(move || {

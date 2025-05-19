@@ -1,3 +1,4 @@
+pub mod async_init;
 mod heir_wallets;
 mod heirs;
 mod wallets;

@@ -1,6 +1,9 @@
 use std::{convert::Infallible, ops::Deref, str::FromStr, sync::Arc};
 
 use btc_heritage_wallet::bitcoin::{Amount, Denomination, SignedAmount};
+use dioxus::signals::ReadableOptionExt;
+
+use crate::helper_hooks::async_init::AsyncSignal;
 
 pub fn log_error<E: core::fmt::Display>(error: E) -> String {
     log::error!("{error}");
@@ -37,6 +40,12 @@ pub fn timestamp_to_date_string(ts: u64) -> String {
 
 pub async fn wait_resource<T: 'static>(resource: dioxus::hooks::Resource<T>) {
     while !resource.finished() {
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    }
+}
+
+pub async fn wait_async_signal<T: 'static>(async_signal: AsyncSignal<T>) {
+    while !async_signal.finished() {
         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
     }
 }

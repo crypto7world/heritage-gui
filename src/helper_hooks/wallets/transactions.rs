@@ -5,12 +5,13 @@ use btc_heritage_wallet::{
 };
 
 use crate::{
+    helper_hooks::async_init::AsyncSignal,
     state_management,
-    utils::{wait_resource, ArcType},
+    utils::{wait_async_signal, ArcType},
 };
 
 pub fn use_resource_wallet_transactions(
-    wallet: Resource<Wallet>,
+    wallet: AsyncSignal<Wallet>,
 ) -> Resource<ArcType<[TransactionSummary]>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_transactions - start");
@@ -18,10 +19,10 @@ pub fn use_resource_wallet_transactions(
         // Subscribe to the service connection
         let _ = *state_management::CONNECTED_USER.read();
 
-        log::debug!("use_resource_wallet_transactions - waiting use_resource_wallet...");
+        log::debug!("use_resource_wallet_transactions - waiting use_async_wallet...");
         // Wait for wallet to finish
-        wait_resource(wallet).await;
-        log::debug!("use_resource_wallet_transactions - use_resource_wallet acquired");
+        wait_async_signal(wallet).await;
+        log::debug!("use_resource_wallet_transactions - use_async_wallet acquired");
 
         let wallet_txs = if let Some(ref wallet) = *wallet.read() {
             let wallet_name = wallet.name().to_owned();

@@ -7,12 +7,13 @@ use btc_heritage_wallet::{
 
 use crate::{
     components::badge::{ExternalDependencyStatus, KeyProviderType, OnlineWalletType},
+    helper_hooks::async_init::AsyncSignal,
     state_management,
-    utils::wait_resource,
+    utils::wait_async_signal,
 };
 
 pub fn use_resource_wallet_status(
-    wallet: Resource<Wallet>,
+    wallet: AsyncSignal<Wallet>,
 ) -> Resource<Result<WalletStatus, String>> {
     use_resource(move || async move {
         log::debug!("use_resource_wallet_status - start");
@@ -20,10 +21,10 @@ pub fn use_resource_wallet_status(
         // Subscribe to the service connection
         let _ = *state_management::CONNECTED_USER.read();
 
-        log::debug!("use_resource_wallet_status - waiting use_resource_wallet...");
+        log::debug!("use_resource_wallet_status - waiting use_async_wallet...");
         // Wait for wallet to finish
-        wait_resource(wallet).await;
-        log::debug!("use_resource_wallet_status - use_resource_wallet acquired");
+        wait_async_signal(wallet).await;
+        log::debug!("use_resource_wallet_status - use_async_wallet acquired");
 
         let wallet_status = if let Some(ref wallet) = *wallet.read() {
             wallet.get_wallet_status().await.map_err(|e| {
@@ -45,7 +46,7 @@ pub fn use_resource_wallet_status(
     })
 }
 
-pub fn use_memo_fingerprint(wallet: Resource<Wallet>) -> Memo<String> {
+pub fn use_memo_fingerprint(wallet: AsyncSignal<Wallet>) -> Memo<String> {
     use_memo(move || {
         log::debug!("use_memo_fingerprint - start compute");
         let fingerprint = if let Some(ref wallet) = *wallet.read() {
@@ -65,7 +66,7 @@ pub fn use_memo_fingerprint(wallet: Resource<Wallet>) -> Memo<String> {
 }
 
 pub fn use_memo_online_status(
-    wallet: Resource<Wallet>,
+    wallet: AsyncSignal<Wallet>,
     wallet_status: Resource<Result<WalletStatus, String>>,
 ) -> Memo<Option<(OnlineWalletType, ExternalDependencyStatus)>> {
     use_memo(move || {
@@ -89,7 +90,7 @@ pub fn use_memo_online_status(
     })
 }
 pub fn use_memo_keyprovider_status(
-    wallet: Resource<Wallet>,
+    wallet: AsyncSignal<Wallet>,
     wallet_status: Resource<Result<WalletStatus, String>>,
 ) -> Memo<Option<(KeyProviderType, ExternalDependencyStatus)>> {
     use_memo(move || {

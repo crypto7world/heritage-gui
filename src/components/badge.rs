@@ -1,5 +1,6 @@
-use btc_heritage_wallet::AnyKeyProvider;
 use dioxus::prelude::*;
+
+use btc_heritage_wallet::AnyKeyProvider;
 
 use crate::{
     components::misc::Tooltip, helper_hooks::CompositeHeir, loaded::prelude::*, utils::ArcStr,

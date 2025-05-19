@@ -15,7 +15,7 @@ use crate::{
         balance::UIWalletBalance,
         timestamp::LastSyncSpan,
     },
-    helper_hooks,
+    helper_hooks::{self, async_init::AsyncSignal},
     loaded::LoadedComponent,
     utils::{ArcStr, ArcType},
     Route,
@@ -25,7 +25,7 @@ use crate::{
 pub fn WalletWrapperLayout(wallet_name: ArcStr) -> Element {
     log::debug!("WalletWrapperView Rendered");
 
-    let wallet = helper_hooks::use_resource_wallet(wallet_name);
+    let wallet = helper_hooks::use_async_wallet(wallet_name);
 
     let wallet_status = helper_hooks::use_resource_wallet_status(wallet);
 
@@ -61,7 +61,7 @@ pub fn WalletView(wallet_name: ArcStr) -> Element {
 
     let navigator = use_navigator();
 
-    let wallet = use_context::<Resource<Wallet>>();
+    let wallet = use_context::<AsyncSignal<Wallet>>();
     let wallet_status = use_context::<Resource<Result<WalletStatus, String>>>();
 
     let fingerprint = helper_hooks::use_memo_fingerprint(wallet);
