@@ -1,0 +1,36 @@
+{
+  "languages": {
+    "Rust": {
+      "formatter": [
+        {
+          "external": {
+            "command": "bash",
+            "arguments": [
+              "-o",
+              "pipefail",
+              "-c",
+              "rustfmt --edition 2021 --emit stdout | dx fmt -f -"
+            ]
+          }
+        }
+      ],
+      "language_servers": ["rust-analyzer", "tailwindcss-language-server"]
+    },
+    "CSS": {
+      "language_servers": ["tailwindcss-language-server"]
+    }
+  },
+  "lsp": {
+    "tailwindcss-language-server": {
+      "settings": {
+        "experimental": {
+          "classRegex": ["class:[^\"]*\"([^\"]*)\""]
+        },
+        "includeLanguages": {
+          "rust": "html"
+        },
+        "emmetCompletions": false
+      }
+    }
+  }
+}
