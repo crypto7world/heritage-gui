@@ -45,140 +45,169 @@ pub fn AppConfig() -> Element {
         );
 
     use_drop(|| log::debug!("AppConfig Dropped"));
-    // let mut summary_focus = use_signal(|| false);
-    // let mut content_focus = use_signal(|| false);
+
+    rsx! {
+        AppConfigDropDown {
+            head: rsx! {
+                MaybeOnPathHighlight { steps: &[OnboardingStep::ClickConnectService, OnboardingStep::ConfigureBlockchainProvider],
+                    div { class: "size-full content-center text-center border rounded-box", "Status" }
+                }
+            },
+            div { class: "flex flex-col px-1",
+                div { class: "flex flex-col px-3",
+                    // Header
+                    div { class: "text-lg font-bold mb-2 text-center", "Application Status" }
+
+                    // Bitcoin Network
+                    div { class: "text-sm",
+                        div { class: "mb-1", "Bitcoin Network:" }
+                        div { class: "font-bold", {format!("{:?}", current_bitcoin_network())} }
+                    }
+
+                    // Database Status
+                    div { class: "text-sm",
+                        div { class: "mb-1", "Database Path:" }
+                        div { class: "font-bold", {database_path.read().to_string_lossy()} }
+                    }
+
+                    hr { class: "mt-4 h-px border-t border-solid border-gray-500" }
+                    // Header
+                    div { class: "text-lg font-bold mb-2 text-center", "Service Status" }
+
+                    // Heritage Service Status
+                    div { class: "text-sm",
+                        div { class: "text-lg flex items-center justify-between",
+                            if let Some(ServiceStatus::Connected(_)) = *state_management::SERVICE_STATUS.read() {
+                                div {
+                                    div { class: "text-sm font-thin", "Connected as:" }
+                                    div { class: "text-3xl font-black text-center",
+                                        {connected_user_name}
+                                    }
+                                    div { class: "text-sm font-medium text-center",
+                                        {connected_user_email}
+                                    }
+                                }
+                            } else {
+                                div { "Not Connected" }
+                            }
+                            ServiceServiceStatus {}
+                        }
+                    }
+
+                    div { class: "mt-4 w-1/2 mx-auto **:w-full", ServiceConnectButton {} }
+
+                    hr { class: "mt-4 h-px border-t border-solid border-gray-500" }
+                    // Header
+                    div { class: "text-lg font-bold mb-2 text-center", "Blockchain Provider Status" }
+
+                    // Blockchain Provider Status
+                    div { class: "text-sm",
+                        div { class: "text-lg flex items-center justify-between",
+                            if let Some(BlockchainProviderStatus::Connected(_)) = *state_management::BLOCKCHAIN_PROVIDER_STATUS
+                                .read()
+                            {
+                                div {
+                                    div { class: "text-sm font-thin", "Connected at height:" }
+                                    div { class: "text-xl font-black text-center",
+                                        {blockchain_provider_height}
+                                    }
+                                }
+                            } else {
+                                div { "Not Connected" }
+                            }
+                            BlockchainProviderServiceStatus {}
+                        }
+                    }
+
+                    hr { class: "mt-4 h-px border-t border-solid border-gray-500" }
+                    // Header
+                    div { class: "text-lg font-bold mb-2 text-center", "Ledger Status" }
+
+                    // Ledger Status
+                    LedgerServiceStatusWithDesc { class: "text-lg flex items-center justify-between" }
+                }
+
+                hr { class: "mt-6 mb-4 h-px border-t-2 border-solid border-gray-500" }
+                // Configuration button
+                div { class: "px-3",
+                    MaybeOnPathHighlight { steps: &[OnboardingStep::ConfigureBlockchainProvider],
+                        button {
+                            class: "btn btn-secondary btn-block",
+                            onclick: move |_| {
+                                document::eval("document.activeElement.blur();");
+                                navigator().push(Route::AppConfigView {});
+                            },
+                            "Open Configuration"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// On Windows, using the details/summary method automatically displays a " ▶ "/" ▼ " char on top of the button
+// On Linux, using the tabindex/button leads to the dropdown weirdly not displaying when directly clicked but appearing
+// if the app window lost and regain focus...
+//
+// I don't really know (or care) what black magic was written in WebKit for one or the other platform.
+// For now I will just use what's working for each platform.
+#[cfg(target_os = "windows")]
+#[component]
+pub fn AppConfigDropDown(head: Element, children: Element) -> Element {
+    rsx! {
+        div { class: "dropdown dropdown-end",
+            button {
+                tabindex: "0",
+                class: "h-full p-2 content-center text-center cursor-pointer min-w-24",
+                {head}
+            }
+            div {
+                tabindex: "0",
+                class: "dropdown-content bg-base-100 rounded-b-xl min-w-sm p-4 max-h-[85vh] overflow-y-scroll shadow-lg shadow-base-content/10",
+                {children}
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+#[component]
+pub fn AppConfigDropDown(head: Element, children: Element) -> Element {
     let mut mouse_outside = use_signal(|| true);
     let mut dropdown_open = use_signal(|| false);
-    //
+    let mut dropdown_content = use_signal(|| None);
 
     rsx! {
         details {
             class: "dropdown dropdown-end",
             open: dropdown_open(),
-            onmouseenter: move |e| {
-                log::debug!("details onmouseenter: {:?}", e.data());
-                mouse_outside.set(false);
-            },
-            onmouseleave: move |e| {
-                log::debug!("details onmouseleave: {:?}", e.data());
-                mouse_outside.set(true);
-            },
+            onmouseenter: move |_| mouse_outside.set(false),
+            onmouseleave: move |_| mouse_outside.set(true),
             summary {
                 class: "h-full p-2 content-center text-center cursor-pointer min-w-24",
-                onfocusout: move |e| {
-                    log::debug!("summary onfocusout: {:?}", e.data());
+                onfocusout: move |_| {
                     if mouse_outside() {
                         dropdown_open.set(false);
                     }
                 },
-                onclick: move |e| {
-                    log::debug!("summary onfocusout: {:?}", e.data());
-                    dropdown_open.set(!dropdown_open());
-                },
-                MaybeOnPathHighlight { steps: &[OnboardingStep::ClickConnectService, OnboardingStep::ConfigureBlockchainProvider],
-                    div { class: "size-full content-center text-center border rounded-box",
-                        "Status"
-                    }
-                }
+                onclick: move |_| dropdown_open.set(!dropdown_open()),
+                {head}
             }
             div {
                 tabindex: "0",
                 class: "dropdown-content bg-base-100 rounded-b-xl min-w-sm p-4 max-h-[85vh] overflow-y-scroll shadow-lg shadow-base-content/10",
-                onfocusout: move |e| {
-                    log::debug!("content onfocusout: {:?}", e.data());
+                onmounted: move |e| dropdown_content.set(Some(e.data())),
+                onfocusout: move |_| async move {
                     if mouse_outside() {
                         dropdown_open.set(false);
+                    } else {
+                        if let Some(dropdown_content) = dropdown_content() {
+                            let _ = dropdown_content.set_focus(true).await;
+                        }
                     }
                 },
-                div { class: "flex flex-col px-1",
-                    div { class: "flex flex-col px-3",
-                        // Header
-                        div { class: "text-lg font-bold mb-2 text-center", "Application Status" }
-
-                        // Bitcoin Network
-                        div { class: "text-sm",
-                            div { class: "mb-1", "Bitcoin Network:" }
-                            div { class: "font-bold", {format!("{:?}", current_bitcoin_network())} }
-                        }
-
-                        // Database Status
-                        div { class: "text-sm",
-                            div { class: "mb-1", "Database Path:" }
-                            div { class: "font-bold", {database_path.read().to_string_lossy()} }
-                        }
-
-                        hr { class: "mt-4 h-px border-t border-solid border-gray-500" }
-                        // Header
-                        div { class: "text-lg font-bold mb-2 text-center", "Service Status" }
-
-                        // Heritage Service Status
-                        div { class: "text-sm",
-                            div { class: "text-lg flex items-center justify-between",
-                                if let Some(ServiceStatus::Connected(_)) = *state_management::SERVICE_STATUS.read() {
-                                    div {
-                                        div { class: "text-sm font-thin", "Connected as:" }
-                                        div { class: "text-3xl font-black text-center",
-                                            {connected_user_name}
-                                        }
-                                        div { class: "text-sm font-medium text-center",
-                                            {connected_user_email}
-                                        }
-                                    }
-                                } else {
-                                    div { "Not Connected" }
-                                }
-                                ServiceServiceStatus {}
-                            }
-                        }
-
-                        div { class: "mt-4 w-1/2 mx-auto **:w-full", ServiceConnectButton {} }
-
-                        hr { class: "mt-4 h-px border-t border-solid border-gray-500" }
-                        // Header
-                        div { class: "text-lg font-bold mb-2 text-center", "Blockchain Provider Status" }
-
-                        // Blockchain Provider Status
-                        div { class: "text-sm",
-                            div { class: "text-lg flex items-center justify-between",
-                                if let Some(BlockchainProviderStatus::Connected(_)) = *state_management::BLOCKCHAIN_PROVIDER_STATUS
-                                    .read()
-                                {
-                                    div {
-                                        div { class: "text-sm font-thin", "Connected at height:" }
-                                        div { class: "text-xl font-black text-center",
-                                            {blockchain_provider_height}
-                                        }
-                                    }
-                                } else {
-                                    div { "Not Connected" }
-                                }
-                                BlockchainProviderServiceStatus {}
-                            }
-                        }
-
-                        hr { class: "mt-4 h-px border-t border-solid border-gray-500" }
-                        // Header
-                        div { class: "text-lg font-bold mb-2 text-center", "Ledger Status" }
-
-                        // Ledger Status
-                        LedgerServiceStatusWithDesc { class: "text-lg flex items-center justify-between" }
-                    }
-
-                    hr { class: "mt-6 mb-4 h-px border-t-2 border-solid border-gray-500" }
-                    // Configuration button
-                    div { class: "px-3",
-                        MaybeOnPathHighlight { steps: &[OnboardingStep::ConfigureBlockchainProvider],
-                            button {
-                                class: "btn btn-secondary btn-block",
-                                onclick: move |_| {
-                                    document::eval("document.activeElement.blur();");
-                                    navigator().push(Route::AppConfigView {});
-                                },
-                                "Open Configuration"
-                            }
-                        }
-                    }
-                }
+                {children}
             }
         }
     }
