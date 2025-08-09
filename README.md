@@ -108,7 +108,7 @@ Of course, you can take steps to do all that on your own; the service is simply 
 As this is the first iteration of Heritage GUI, you can expect some cosmetic issues:
 
 - **Missing icon for Windows apps**: The Windows application currently lacks a proper icon. This is a cosmetic issue that doesn't affect functionality.
-- **Untested macOS bundle**: The macOS bundle has not been thoroughly tested yet. If you're a macOS user, your feedback is very welcome - please [open an issue][issues-url] to report any problems or confirm that it works correctly.
+- **Untested macOS bundle**: The macOS bundle has not been thoroughly tested yet. If you're a macOS user, your feedback is very welcome.
 
 Since we're just releasing the first iteration, please don't hesitate to [open issues][issues-url] for any problems you encounter. I am keen on improving the software and values community feedback.
 
