@@ -22,10 +22,10 @@ mkdir -p assets
 mkdir -p icons
 
 echo "Generating Tailwind CSS"
-npx -y @tailwindcss/cli -m -i input.css -o assets/tailwind.css
+npx @tailwindcss/cli -m -i input.css -o assets/tailwind.css
 
 echo "Generating Icons"
-npx -y @tauri-apps/cli icon -o icons/ $SOURCE_LOGO
+npx @tauri-apps/cli icon -o icons/ $SOURCE_LOGO
 
 # Uses convert instead of magick because Github Actions Ubuntu
 # still uses an old version of the package

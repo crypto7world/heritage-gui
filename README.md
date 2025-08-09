@@ -39,6 +39,7 @@
   <summary>Table of Contents</summary>
   <ul>
     <li><a href="#about-the-project">About The Project</a></li>
+    <li><a href="#known-issues">Known Issues</a></li>
     <li><a href="#stability-and-versioning">Stability and versioning</a></li>
     <li><a href="#installation">Installation</a>
       <ul>
@@ -56,6 +57,7 @@
     </li>
     <li><a href="#development">Development</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#hardware-wallet-support">Hardware Wallet Support</a></li>
     <li><a href="#minimum-supported-rust-version-msrv">Minimum Supported Rust Version (MSRV)</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#built-with">Built With</a></li>
@@ -101,11 +103,22 @@ Of course, you can take steps to do all that on your own; the service is simply 
 
 <p align="right">(<a href="#top">↑ back to top</a>)</p>
 
+## Known Issues
+
+As this is the first iteration of Heritage GUI, you can expect some cosmetic issues:
+
+- **Missing icon for Windows apps**: The Windows application currently lacks a proper icon. This is a cosmetic issue that doesn't affect functionality.
+- **Untested macOS bundle**: The macOS bundle has not been thoroughly tested yet. If you're a macOS user, your feedback is very welcome - please [open an issue][issues-url] to report any problems or confirm that it works correctly.
+
+Since we're just releasing the first iteration, please don't hesitate to [open issues][issues-url] for any problems you encounter. I am keen on improving the software and values community feedback.
+
+<p align="right">(<a href="#top">↑ back to top</a>)</p>
+
 ## Stability and versioning
 
 Commits between releases SHOULD NOT be considered stable. You should only use tagged releases.
 
-The software provided is working and can be safely used for Bitcoin's holdings.
+The software provided is working and can be safely used for Bitcoin holdings. That being said, your computer *may not* be secure, so prefer the use of a Ledger device as Key Provider, or be sure to have a strong passphrase if you choose to store your private keys locally.
 
 We are using [Semantic Versioning](https://github.com/semver/semver) (MAJOR.MINOR.PATCH).
 
@@ -168,8 +181,6 @@ To build the Heritage GUI from sources, make sure you have the required dependen
 3. **Node.js**: Install npm and the Tailwind CSS CLI:
    ```shell
    # Install Node.js from https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-   # Install Tailwind CSS CLI
-   npm install -D @tailwindcss/cli
    ```
 
 #### Platform-specific dependencies
@@ -192,10 +203,10 @@ sudo apt install \
   libxdo-dev
 ```
 
-If you use Nix, you can setup the project environment with all the dependencies using the provided flake:
+If you use Nix, you can setup the project environment with all the dependencies using the provided flake once the repo is forked:
 
 ```shell
-nix develop
+nix develop ./nix
 ```
 
 **macOS:**
@@ -212,8 +223,9 @@ Dependencies are handled by vcpkg or system libraries. WebView2 should be instal
   cd heritage-gui
   ```
 
-2. Generate assets:
+2. Install Tailwind/DaisyUI/Tauri and generate assets:
   ```shell
+   npm install -D
   ./generate-assets.sh
   ```
 
@@ -299,20 +311,39 @@ The roadmap is accurate regarding the immediate goals for the project:
 - [x] Add GUI interface for Heritage wallet management
 - [x] Desktop application support (Linux, macOS, Windows)
 - [x] Integration with btc-heritage library
-- [x] Dioxus-based responsive interface
-- [x] Hardware wallet integration (Ledger support)
-- [x] Local and service-based wallet management
-- [x] Transaction creation and signing interface
-- [x] Heir management interface
-- [x] Heritage configuration management
-- [x] Address generation and management
 - [x] Balance and transaction history display
 - [x] PSBT analysis and visualization
 - [ ] Multi-language support
-- [ ] Enhanced accessibility features
 - [ ] Mobile application versions (iOS, Android)
+- [ ] Support other Hardware Wallet, please request the one you like
 
-Also consult the [open issues](https://github.com/crypto7world/heritage-gui/issues) for other proposed features and known issues.
+Also consult the [open issues][issues-url] for other proposed features and known issues.
+
+<p align="right">(<a href="#top">↑ back to top</a>)</p>
+
+## Hardware Wallet Support
+
+Heritage GUI supports hardware wallets for secure private key management. Below is the current compatibility status:
+
+### Supported Devices
+
+| Device | Status | Notes |
+|--------|--------|--------|
+| **Ledger** | ✅ Supported | Full support for Taproot wallets using TapScript |
+
+### Unsupported Devices
+
+| Device | Status | Reason |
+|--------|--------|--------|
+| **Trezor** | ❌ Not Supported | Does not support Taproot wallets using TapScript |
+
+### Request Support for Your Device
+
+Don't see your hardware wallet listed? We welcome requests for additional hardware wallet support!
+
+**[Request Hardware Wallet Support](https://github.com/crypto7world/heritage-gui/issues/new?assignees=&labels=enhancement%2Chardware-wallet&projects=&template=hardware-wallet-support.md&title=%5BHardware+Wallet%5D+Support+for+%5BDEVICE+NAME%5D)**
+
+Please include a link to the official product page and any technical specifications that you know off about Bitcoin/Taproot support when submitting your request.
 
 <p align="right">(<a href="#top">↑ back to top</a>)</p>
 
