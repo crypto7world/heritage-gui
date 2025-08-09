@@ -140,7 +140,7 @@ fn App() -> Element {
 
     rsx! {
         document::Title { "{TITLE}" }
-        document::Link { rel: "icon", href: asset!("/assets/crypto7world-logo.png") }
+        document::Link { rel: "icon", href: asset!("/assets/favicon.ico") }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
 
         div {

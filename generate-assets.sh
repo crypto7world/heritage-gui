@@ -30,7 +30,7 @@ npx @tauri-apps/cli icon -o icons/ $SOURCE_LOGO
 # Uses convert instead of magick because Github Actions Ubuntu
 # still uses an old version of the package
 echo "Generating favicon.ico..."
-convert -quiet "$SOURCE_LOGO" \( -clone 0 -resize 16x16 \) \( -clone 0 -resize 32x32 \) \( -clone 0 -resize 64x64 \) -delete 0 assets/favicon.ico
+convert -quiet "$SOURCE_LOGO" \( -clone 0 -resize 32x32 \) \( -clone 0 -resize 16x16 \) \( -clone 0 -resize 64x64 \) -delete 0 assets/favicon.ico
 
 echo "Generating in-app Logo..."
 convert -quiet "$SOURCE_LOGO" -resize 256x256 assets/crypto7world-logo.png
