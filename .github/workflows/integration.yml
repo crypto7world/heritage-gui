@@ -1,0 +1,232 @@
+name: OS Specific Integration
+
+on:
+  push:
+    tags:
+      - test-*
+
+env:
+  RUST_VERSION: "1.85"
+  DIOXUS_CLI_VERSION: "0.6.3"
+
+jobs:
+  determine-target:
+    runs-on: ubuntu-latest
+    outputs:
+      target_os: ${{ steps.parse_tag.outputs.target_os }}
+      should_build: ${{ steps.parse_tag.outputs.should_build }}
+      version: ${{ steps.parse_tag.outputs.version }}
+      build_matrix: ${{ steps.parse_tag.outputs.build_matrix }}
+    steps:
+      - name: Parse tag and determine target
+        id: parse_tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$TAG" >> $GITHUB_OUTPUT
+
+          case "$TAG" in
+            test-windows)
+              echo "target_os=windows" >> $GITHUB_OUTPUT
+              echo "should_build=true" >> $GITHUB_OUTPUT
+              echo 'build_matrix={"include":[{"arch":"x86_64-windows","runner":"windows-2022","target":"x86_64-pc-windows-msvc","bundle_args":"--platform windows --package-types nsis"}]}' >> $GITHUB_OUTPUT
+              ;;
+            test-linux)
+              echo "target_os=linux" >> $GITHUB_OUTPUT
+              echo "should_build=true" >> $GITHUB_OUTPUT
+              echo 'build_matrix={"include":[{"arch":"x86_64-linux-gnu","runner":"ubuntu-24.04","target":"x86_64-unknown-linux-gnu","bundle_args":"--platform linux --package-types appimage"}]}' >> $GITHUB_OUTPUT
+              ;;
+            test-mac)
+              echo "target_os=mac" >> $GITHUB_OUTPUT
+              echo "should_build=true" >> $GITHUB_OUTPUT
+              echo 'build_matrix={"include":[{"arch":"aarch64-apple-darwin","runner":"macos-latest","target":"aarch64-apple-darwin","bundle_args":"--platform macos --package-types dmg"},{"arch":"x86_64-apple-darwin","runner":"macos-latest","target":"x86_64-apple-darwin","bundle_args":"--platform macos --package-types dmg"}]}' >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "target_os=unknown" >> $GITHUB_OUTPUT
+              echo "should_build=false" >> $GITHUB_OUTPUT
+              echo 'build_matrix={"include":[]}' >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+  generate-assets:
+    runs-on: ubuntu-latest
+    needs: determine-target
+    if: needs.determine-target.outputs.should_build == 'true'
+    env:
+      SOURCE_LOGO: crypto7world-logo-v2.png
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install ImageMagick
+        run: sudo apt install imagemagick
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Tailwind CSS
+        run: |
+          npm install -D
+
+      - name: Generate Assets
+        run: |
+          chmod +x generate-assets.sh
+          ./generate-assets.sh
+
+      - name: Upload assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-assets
+          path: |
+            icons/
+            assets/
+
+  build:
+    name: Build Release
+    needs: [determine-target, generate-assets]
+    if: needs.determine-target.outputs.should_build == 'true'
+    strategy:
+      matrix: ${{ fromJSON(needs.determine-target.outputs.build_matrix) }}
+
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Download generated assets
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-assets
+
+      # ==============================
+      #       Setup Rust
+      # ==============================
+      - name: Get Rust (Unix)
+        if: matrix.arch != 'x86_64-windows'
+        run: |
+          echo Installing Rust $RUST_VERSION
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $RUST_VERSION --target ${{ matrix.target }} --profile minimal
+          source ~/.cargo/env
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | sh -s
+
+      - name: Get Rust (Windows)
+        if: matrix.arch == 'x86_64-windows'
+        run: |
+          echo Installing Rust $env:RUST_VERSION
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $env:RUST_VERSION --target ${{ matrix.target }} --profile minimal
+          $env:Path += ";$env:USERPROFILE\.cargo\bin"
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | sh -s
+
+      # ==============================
+      #       Install Dependencies
+      # ==============================
+      - name: Install deps for Linux
+        if: matrix.arch == 'x86_64-linux-gnu'
+        run: |
+          sudo apt update
+          sudo apt install \
+            build-essential \
+            wget \
+            file \
+            libwebkit2gtk-4.1-dev=2.44.0-2 \
+            libwebkit2gtk-4.1-0=2.44.0-2 \
+            libjavascriptcoregtk-4.1-0=2.44.0-2 \
+            libjavascriptcoregtk-4.1-dev=2.44.0-2 \
+            gir1.2-javascriptcoregtk-4.1=2.44.0-2 \
+            gir1.2-webkit2-4.1=2.44.0-2 \
+            xdotool \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libusb-1.0-0-dev \
+            libudev-dev \
+            libhidapi-dev
+
+      - name: Install deps for macOS
+        if: runner.os == 'macOS'
+        run: |
+          # Dependencies are typically available via system frameworks on macOS
+
+      - name: Install deps for Windows
+        if: matrix.arch == 'x86_64-windows'
+        run: |
+          # Dependencies are handled by vcpkg or system libraries on Windows
+
+      # ==============================
+      #       Install Dioxus CLI
+      # ==============================
+      - name: Install Dioxus CLI (Unix)
+        if: matrix.arch != 'x86_64-windows'
+        run: |
+          source ~/.cargo/env
+          cargo binstall dioxus-cli@${{ env.DIOXUS_CLI_VERSION }} -y
+
+      - name: Install Dioxus CLI (Windows)
+        if: matrix.arch == 'x86_64-windows'
+        run: |
+          $env:Path += ";$env:USERPROFILE\.cargo\bin"
+          cargo binstall dioxus-cli@${{ env.DIOXUS_CLI_VERSION }} -y
+
+      # ==============================
+      #       Build Application
+      # ==============================
+      - name: Build Heritage GUI (Unix)
+        if: matrix.arch != 'x86_64-windows'
+        run: |
+          source ~/.cargo/env
+          dx bundle -r --target ${{ matrix.target }} --features desktop ${{ matrix.bundle_args }}
+
+      - name: Build Heritage GUI (Windows)
+        if: matrix.arch == 'x86_64-windows'
+        run: |
+          $env:Path += ";$env:USERPROFILE\.cargo\bin"
+          Invoke-Expression "dx bundle -r --target ${{ matrix.target }} --features desktop ${{ matrix.bundle_args }}"
+
+      # ==============================
+      #       Create Artifacts
+      # ==============================
+      - name: Find and prepare artifacts (Unix)
+        if: matrix.arch != 'x86_64-windows'
+        run: |
+          mkdir -p artifacts
+
+          # Copy all built packages
+          cp dist/* artifacts/
+
+          # Rename files to include version and architecture
+          cd artifacts
+          for file in *; do
+            if [ -f "$file" ]; then
+              ext="${file##*.}"
+              mv "$file" "heritage-gui-${{ needs.determine-target.outputs.version }}-${{ matrix.arch }}.${ext}"
+            fi
+          done
+          cd ..
+
+      - name: Find and prepare artifacts (Windows)
+        if: matrix.arch == 'x86_64-windows'
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts
+
+          # Copy all built packages
+          Get-ChildItem -Path "dist" | Copy-Item -Destination artifacts\
+
+          # Rename files to include version and architecture
+          Get-ChildItem -Path artifacts | ForEach-Object {
+            $ext = $_.Extension
+            if ($ext -eq ".exe") {$ext="-setup.exe"}
+            $newName = "heritage-gui-${{ needs.determine-target.outputs.version }}-${{ matrix.arch }}$ext"
+            Rename-Item $_.FullName $newName
+          }
+
+      # ==============================
+      #       Upload Artifacts
+      # ==============================
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: heritage-gui-${{ needs.determine-target.outputs.version }}-${{ matrix.arch }}
+          path: artifacts/*
+          compression-level: 0
