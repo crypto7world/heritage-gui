@@ -172,7 +172,7 @@ To build the Heritage GUI from sources, make sure you have the required dependen
 2. **Dioxus CLI**: Install using cargo-binstall (recommended):
    ```shell
    # Install cargo-binstall first
-   curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+   curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | sh
 
    # Install Dioxus CLI
    cargo binstall dioxus-cli@0.6.3
@@ -191,6 +191,7 @@ sudo apt update
 sudo apt install \
   build-essential \
   wget \
+  imagemagick \
   file \
   libwebkit2gtk-4.1-dev \
   libssl-dev \
@@ -210,29 +211,45 @@ nix develop ./nix
 ```
 
 **macOS:**
-Dependencies are typically available via system frameworks. If building iOS apps, XCode is required.
+Dependencies are typically available via system frameworks. Still need ImageMagick though:
+
+```shell
+brew install imagemagick
+```
 
 **Windows:**
 Dependencies are handled by vcpkg or system libraries. WebView2 should be installed (comes with modern Windows/Edge).
 
+Still need ImageMagick though. Got to [https://imagemagick.org/script/download.php#windows](https://imagemagick.org/script/download.php#windows)
+
 #### Building
 
 1. Clone this repository:
-  ```shell
-  git clone https://github.com/crypto7world/heritage-gui
-  cd heritage-gui
-  ```
+```shell
+git clone https://github.com/crypto7world/heritage-gui
+cd heritage-gui
+```
 
 2. Install Tailwind/DaisyUI/Tauri and generate assets:
-  ```shell
-   npm install -D
-  ./generate-assets.sh
-  ```
+```shell
+  npm install -D
+./generate-assets.sh
+```
 
 3. Build the application:
-  ```shell
-  dx bundle -r --platform desktop
-  ```
+```shell
+# Linux
+dx bundle -r --features desktop --platform linux --package-types appimage
+# Then find the AppImage in the "dist" folder
+
+# MacOS
+dx bundle -r --features desktop --platform macos --package-types dmg
+# Then find the Disk Image in the "dist" folder
+
+# Windows
+dx bundle -r --features desktop --platform windows --package-types nsis
+# Then find the installer in the "dist" folder
+```
 
 <p align="right">(<a href="#top">↑ back to top</a>)</p>
 
