@@ -141,21 +141,17 @@ If you are on Linux and plan on using a Ledger device, you need to install UDEV 
 #### Security Warning: Unsigned Binaries
 
 **Important:** The pre-compiled binaries are currently not code-signed. This means:
-
 - **Windows** will show security warnings when running the executable (Windows Defender SmartScreen may block execution)
-- **macOS** will prevent the application from running and show "unidentified developer" warnings
 - Most antivirus software may flag the binaries as potentially harmful
 
 **What you can do:**
 
 1. **Ignore the warnings** if you trust the source (recommended for users familiar with the project)
    - Windows: Click "More info" then "Run anyway"
-   - macOS: Right-click the app, select "Open", then confirm in the dialog
 
 2. **Compile from source** for maximum security assurance (see instructions below)
 
 These warnings are normal for unsigned binaries and don't indicate malicious software. Code signing certificates are expensive and this is an open-source project. We will implement proper code signing in future releases if people take interest in the project.
-
 
 ### From source
 

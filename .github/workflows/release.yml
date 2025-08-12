@@ -56,22 +56,22 @@ jobs:
       matrix:
         arch:
           - x86_64-linux-gnu
-          - aarch64-apple-darwin
-          - x86_64-apple-darwin
+          # - aarch64-apple-darwin
+          # - x86_64-apple-darwin
           - x86_64-windows
         include:
           - arch: x86_64-linux-gnu
             runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             bundle_args: --platform linux --package-types appimage
-          - arch: aarch64-apple-darwin
-            runner: macos-latest
-            target: aarch64-apple-darwin
-            bundle_args: --platform macos --package-types dmg
-          - arch: x86_64-apple-darwin
-            runner: macos-latest
-            target: x86_64-apple-darwin
-            bundle_args: --platform macos --package-types dmg
+          # - arch: aarch64-apple-darwin
+          #   runner: macos-latest
+          #   target: aarch64-apple-darwin
+          #   bundle_args: --platform macos --package-types dmg
+          # - arch: x86_64-apple-darwin
+          #   runner: macos-latest
+          #   target: x86_64-apple-darwin
+          #   bundle_args: --platform macos --package-types dmg
           - arch: x86_64-windows
             runner: windows-2022
             target: x86_64-pc-windows-msvc
@@ -264,10 +264,6 @@ jobs:
 
           ### Linux
           - **AppImage**: [heritage-gui-${{ env.VERSION }}-x86_64-linux-gnu.AppImage](https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/heritage-gui-${{ env.VERSION }}-x86_64-linux-gnu.AppImage)
-
-          ### macOS
-          - **Intel Disk Image**: [heritage-gui-${{ env.VERSION }}-x86_64-apple-darwin.dmg](https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/heritage-gui-${{ env.VERSION }}-x86_64-apple-darwin.dmg)
-          - **Apple Silicon Disk Image**: [heritage-gui-${{ env.VERSION }}-aarch64-apple-darwin.dmg](https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/heritage-gui-${{ env.VERSION }}-aarch64-apple-darwin.dmg)
 
           ### Windows
           - **NSIS Installer**: [heritage-gui-${{ env.VERSION }}-x86_64-windows-setup.exe](https://github.com/${{ env.REPO_NAME }}/releases/download/${{ env.VERSION }}/heritage-gui-${{ env.VERSION }}-x86_64-windows-setup.exe)
