@@ -12,7 +12,7 @@ license = "MIT"
 
 [dependencies]
 # btc-heritage-wallet = { path = "../btc-heritage/crates/btc-heritage-wallet" }
-btc-heritage-wallet = { git = "https://github.com/crypto7world/btc-heritage.git", tag = "v0.28.1" }
+btc-heritage-wallet = { git = "https://github.com/crypto7world/btc-heritage.git", tag = "v0.28.2" }
 
 dioxus = { version = "0.6", features = ["router"] }
 futures-util = "0.3.31"

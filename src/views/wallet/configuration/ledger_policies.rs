@@ -12,7 +12,7 @@ use crate::{
     components::{
         inputs::BackupRestoreSection,
         modal::ConfigModal,
-        svg::{AlertOutline, CheckCircle, DrawSvg},
+        svg::{AlertOutline, CheckCircle, Delete, DrawSvg},
     },
     utils::{log_error, CCStr},
 };
@@ -256,82 +256,141 @@ pub(super) fn LedgerPoliciesConfig(wallet_name: CCStr) -> Element {
 
     let can_register = use_memo(move || has_policies_to_register() && ledger_ready());
 
-    let register_policies = move |_| {
+    let can_delete = use_memo(move || {
+        ledger_registered_policies
+            .lmap(|lrp| !lrp.is_empty())
+            .unwrap_or_default()
+    });
+
+    let register_policies = {
         let wallet_name = wallet_name.clone();
-        async move {
-            *in_operation.write() = true;
-            *register_modal.write() = true;
+        move |_| {
+            let wallet_name = wallet_name.clone();
+            async move {
+                *in_operation.write() = true;
+                *register_modal.write() = true;
 
-            let policies_ref = ledger_unregistered_policies.read();
-            let policies = match policies_ref.as_ref() {
-                Some(Ok(policies)) => policies,
-                _ => {
-                    log::error!("No unregistered policies available");
-                    alert_error("No unregistered policies available");
-                    *in_operation.write() = false;
-                    *register_modal.write() = false;
+                let policies_ref = ledger_unregistered_policies.read();
+                let policies = match policies_ref.as_ref() {
+                    Some(Ok(policies)) => policies,
+                    _ => {
+                        log::error!("No unregistered policies available");
+                        alert_error("No unregistered policies available");
+                        *in_operation.write() = false;
+                        *register_modal.write() = false;
+                        return;
+                    }
+                };
+
+                *current_policy_index.write() = 0usize;
+                *policies_to_register_count.write() = policies.len();
+
+                let Ok(mut owned_wallet) = state_management::get_wallet(
+                    database_service,
+                    service_client_service,
+                    blockchain_provider_service,
+                    wallet_name,
+                )
+                .await
+                .map_err(log_error) else {
+                    alert_error("Failed to load the wallet from the Database");
                     return;
-                }
-            };
+                };
+                let ledger_key = match owned_wallet.key_provider_mut() {
+                    AnyKeyProvider::Ledger(ledger_key) => ledger_key,
+                    _ => {
+                        alert_error("Wallet does not use Ledger key provider");
+                        return;
+                    }
+                };
+                let result = {
+                    ledger_key
+                        .register_policies(policies.values(), |wp: &WalletPolicy| {
+                            *current_policy_index.write() += 1;
+                            *current_policy.write() = Some(UIWalletPolicy::from_ref(wp));
+                        })
+                        .await
+                        .map_err(log_error)
+                };
 
-            *current_policy_index.write() = 0usize;
-            *policies_to_register_count.write() = policies.len();
-
-            let Ok(mut owned_wallet) = state_management::get_wallet(
-                database_service,
-                service_client_service,
-                blockchain_provider_service,
-                wallet_name,
-            )
-            .await
-            .map_err(log_error) else {
-                alert_error("Failed to load the wallet from the Database");
-                return;
-            };
-            let ledger_key = match owned_wallet.key_provider_mut() {
-                AnyKeyProvider::Ledger(ledger_key) => ledger_key,
-                _ => {
-                    alert_error("Wallet does not use Ledger key provider");
-                    return;
+                match result {
+                    Ok(_) => {
+                        log::info!("Successfully registered Ledger policies");
+                        alert_success("Ledger policies registered successfully");
+                    }
+                    Err(e) => {
+                        log::error!("Failed to register Ledger policies: {e}");
+                        alert_error(format!("Failed to register Ledger policies: {e}"));
+                    }
                 }
-            };
-            let result = {
-                ledger_key
-                    .register_policies(policies.values(), |wp: &WalletPolicy| {
-                        *current_policy_index.write() += 1;
-                        *current_policy.write() = Some(UIWalletPolicy::from_ref(wp));
-                    })
+                // Temporarily puting into an Arc to share ownership with the blocking thread
+                let owned_wallet = Arc::new(owned_wallet);
+                let Ok(_) = state_management::save_wallet(database_service, owned_wallet.clone())
                     .await
                     .map_err(log_error)
-            };
+                else {
+                    alert_error("Failed to save the wallet into the Database");
+                    return;
+                };
+                // Taking it back from the Arc
+                let owned_wallet = Arc::into_inner(owned_wallet).expect("save_wallet is finished");
+                // Putting it inside the AsyncSignal
+                wallet.write().replace(owned_wallet);
 
-            match result {
-                Ok(_) => {
-                    log::info!("Successfully registered Ledger policies");
-                    alert_success("Ledger policies registered successfully");
-                }
-                Err(e) => {
-                    log::error!("Failed to register Ledger policies: {e}");
-                    alert_error(format!("Failed to register Ledger policies: {e}"));
-                }
+                *current_policy.write() = None;
+                *in_operation.write() = false;
+                *register_modal.write() = false;
             }
-            // Temporarily puting into an Arc to share ownership with the blocking thread
-            let owned_wallet = Arc::new(owned_wallet);
-            let Ok(_) = state_management::save_wallet(database_service, owned_wallet.clone())
-                .await
-                .map_err(log_error)
-            else {
-                alert_error("Failed to save the wallet into the Database");
-                return;
-            };
-            // Taking it back from the Arc
-            let owned_wallet = Arc::into_inner(owned_wallet).expect("save_wallet is finished");
-            // Putting it inside the AsyncSignal
-            wallet.write().replace(owned_wallet);
+        }
+    };
 
-            *current_policy.write() = None;
-            *in_operation.write() = false;
-            *register_modal.write() = false;
+    let delete_registered_policies = {
+        let wallet_name = wallet_name.clone();
+        move |_| {
+            let wallet_name = wallet_name.clone();
+            async move {
+                *in_operation.write() = true;
+
+                let Ok(mut owned_wallet) = state_management::get_wallet(
+                    database_service,
+                    service_client_service,
+                    blockchain_provider_service,
+                    wallet_name,
+                )
+                .await
+                .map_err(log_error) else {
+                    alert_error("Failed to load the wallet from the Database");
+                    return;
+                };
+                let ledger_key = match owned_wallet.key_provider_mut() {
+                    AnyKeyProvider::Ledger(ledger_key) => ledger_key,
+                    _ => {
+                        alert_error("Wallet does not use Ledger key provider");
+                        return;
+                    }
+                };
+                let policies_cleared_count = ledger_key.clear_registered_policies();
+
+                // Temporarily puting into an Arc to share ownership with the blocking thread
+                let owned_wallet = Arc::new(owned_wallet);
+                let Ok(_) = state_management::save_wallet(database_service, owned_wallet.clone())
+                    .await
+                    .map_err(log_error)
+                else {
+                    alert_error("Failed to save the wallet into the Database");
+                    return;
+                };
+                // Taking it back from the Arc
+                let owned_wallet = Arc::into_inner(owned_wallet).expect("save_wallet is finished");
+                // Putting it inside the AsyncSignal
+                wallet.write().replace(owned_wallet);
+
+                log::info!("Successfully cleared {policies_cleared_count} Ledger policies");
+                alert_success("Successfully cleared {policies_cleared_count} Ledger policies");
+
+                *current_policy.write() = None;
+                *in_operation.write() = false;
+            }
         }
     };
 
@@ -359,6 +418,18 @@ pub(super) fn LedgerPoliciesConfig(wallet_name: CCStr) -> Element {
                         "The following Heritage Configurations are already registered on your Ledger device as policies:"
                     }
                     LoadedComponent::<UILedgerPoliciesTable> { input: ledger_registered_policies.into() }
+                    button {
+                        class: "btn btn-primary btn-xs",
+                        disabled: !can_delete() || in_operation(),
+                        onclick: delete_registered_policies,
+                        if in_operation() {
+                            span { class: "loading loading-spinner loading-sm mr-2" }
+                            "Registering..."
+                        } else {
+                            DrawSvg::<Delete> {}
+                            "Delete Registered Policies"
+                        }
+                    }
                 }
             }
             div { class: "collapse collapse-arrow bg-base-200 mb-4",
