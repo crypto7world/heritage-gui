@@ -46,14 +46,19 @@ pub fn use_resource_wallet_names() -> Resource<Vec<CCStr>> {
 pub fn use_async_wallet(name: CCStr) -> AsyncSignal<Wallet> {
     let database_service = state_management::use_database_service();
     let service_client_service = state_management::use_service_client_service();
+    let blockchain_provider_service = state_management::use_blockchain_provider_service();
     use_async_init(move || {
         let name = name.clone();
         async move {
             log::debug!("use_async_wallet - start");
-            let wallet =
-                state_management::get_wallet(database_service, service_client_service, name)
-                    .await
-                    .expect("should exist and I have nothing smart to do with this error anyway");
+            let wallet = state_management::get_wallet(
+                database_service,
+                service_client_service,
+                blockchain_provider_service,
+                name,
+            )
+            .await
+            .expect("should exist and I have nothing smart to do with this error anyway");
             log::debug!("use_async_wallet - loaded");
             wallet
         }

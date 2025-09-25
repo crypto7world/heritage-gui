@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
+use crate::prelude::alert_warn;
+
 use super::*;
 
 pub async fn init_wallet(
     database_service: Coroutine<DatabaseCommand>,
     service_client_service: Coroutine<ServiceClientCommand>,
+    blockchain_provider_service: Coroutine<BlockchainProviderCommand>,
     mut wallet: Wallet,
 ) -> Result<Wallet, String> {
     log::debug!("init_wallet({wallet:?}) - start");
@@ -31,6 +34,13 @@ pub async fn init_wallet(
                 .init_heritage_wallet(get_database(database_service).await)
                 .await
                 .map_err(log_error)?;
+            match blockchain_factory(blockchain_provider_service).await {
+                Ok(bcf) => local_heritage_wallet.init_blockchain_factory(bcf),
+                Err(e) => {
+                    log::warn!("{e}");
+                    alert_warn(e);
+                }
+            };
         }
     };
     let wallet = match wallet.retry_fingerprints_control().await {
@@ -57,6 +67,7 @@ pub async fn init_wallet(
 pub async fn get_wallet(
     database_service: Coroutine<DatabaseCommand>,
     service_client_service: Coroutine<ServiceClientCommand>,
+    blockchain_provider_service: Coroutine<BlockchainProviderCommand>,
     name: CCStr,
 ) -> Result<Wallet, String> {
     log::debug!("get_wallet({name}) - start");
@@ -72,7 +83,13 @@ pub async fn get_wallet(
 
     log::debug!("get_wallet({name}) - loaded");
 
-    init_wallet(database_service, service_client_service, wallet).await
+    init_wallet(
+        database_service,
+        service_client_service,
+        blockchain_provider_service,
+        wallet,
+    )
+    .await
 }
 
 pub async fn delete_wallet(

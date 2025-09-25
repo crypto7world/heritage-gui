@@ -174,6 +174,7 @@ pub(super) fn LedgerPoliciesConfig(wallet_name: CCStr) -> Element {
 
     let database_service = state_management::use_database_service();
     let service_client_service = state_management::use_service_client_service();
+    let blockchain_provider_service = state_management::use_blockchain_provider_service();
 
     let mut wallet = use_context::<AsyncSignal<Wallet>>();
     let fingerprint = use_memo(move || wallet.lmap(|wallet| wallet.fingerprint().ok()).flatten());
@@ -276,11 +277,14 @@ pub(super) fn LedgerPoliciesConfig(wallet_name: CCStr) -> Element {
             *current_policy_index.write() = 0usize;
             *policies_to_register_count.write() = policies.len();
 
-            let Ok(mut owned_wallet) =
-                state_management::get_wallet(database_service, service_client_service, wallet_name)
-                    .await
-                    .map_err(log_error)
-            else {
+            let Ok(mut owned_wallet) = state_management::get_wallet(
+                database_service,
+                service_client_service,
+                blockchain_provider_service,
+                wallet_name,
+            )
+            .await
+            .map_err(log_error) else {
                 alert_error("Failed to load the wallet from the Database");
                 return;
             };
