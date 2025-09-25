@@ -1,6 +1,7 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/1afe1f27d35031f9e3366963181711e19a9e85df";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    # nixpkgs-webkit.url = "github:nixos/nixpkgs/19f22b217c2753ba5e6885c7967bad5337b36c1d";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -13,20 +14,29 @@
   outputs = {
     self,
     nixpkgs,
+    # nixpkgs-webkit,
     flake-utils,
     rust-overlay,
   }:
     flake-utils.lib.eachDefaultSystem
     (
       system: let
-        dioxus_cli = f: p: {
-          my-dioxus = p.callPackage ./dioxus_cli.nix {};
-        };
-        overlays = [(import rust-overlay) dioxus_cli];
+        # dioxus_cli = f: p: {
+        #   my-dioxus = p.callPackage ./dioxus_cli.nix {};
+        # };
+        # webkitOverlay = final: prev: let
+        #   pkgs-webkit = import nixpkgs-webkit {
+        #     inherit system;
+        #     inherit (prev) config;
+        #   };
+        # in {
+        #   webkitgtk_4_1 = pkgs-webkit.webkitgtk_4_1;
+        # };
+        # overlays = [(import rust-overlay) dioxus_cli webkitOverlay];
+        overlays = [(import rust-overlay)];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-
         #         harfbuzzNew = pkgs.harfbuzz.overrideAttrs (finalAttrs: previousAttrs: {
         #           version = "10.1.0";
         #           src = pkgs.fetchurl {
@@ -37,16 +47,15 @@
         rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         build_dependencies = with pkgs; [
           pkg-config
-          gobject-introspection.dev
           nodejs
         ];
         dependencies = with pkgs; [
-          my-dioxus
           at-spi2-atk.dev
           atkmm
           cairo.dev
           gdk-pixbuf.dev
           glib.dev
+          gobject-introspection.dev
           gtk3.dev
           harfbuzz.dev
           librsvg
@@ -57,6 +66,7 @@
           xdotool
           systemd.dev
           imagemagick
+          dioxus-cli
         ];
       in
         with pkgs; {
