@@ -174,39 +174,17 @@ pub fn AppConfigDropDown(head: Element, children: Element) -> Element {
 #[cfg(not(target_os = "windows"))]
 #[component]
 pub fn AppConfigDropDown(head: Element, children: Element) -> Element {
-    let mut mouse_outside = use_signal(|| true);
-    let mut dropdown_open = use_signal(|| false);
-    let mut dropdown_content = use_signal(|| None);
-
     rsx! {
-        details {
-            class: "dropdown dropdown-end",
-            open: dropdown_open(),
-            onmouseenter: move |_| mouse_outside.set(false),
-            onmouseleave: move |_| mouse_outside.set(true),
-            summary {
+        div { class: "dropdown dropdown-end",
+            div {
                 class: "h-full p-2 content-center text-center cursor-pointer min-w-24",
-                onfocusout: move |_| {
-                    if mouse_outside() {
-                        dropdown_open.set(false);
-                    }
-                },
-                onclick: move |_| dropdown_open.set(!dropdown_open()),
+                tabindex: "0",
+                role: "button",
                 {head}
             }
             div {
                 tabindex: "0",
                 class: "dropdown-content bg-base-100 rounded-b-xl min-w-sm p-4 max-h-[85vh] overflow-y-scroll shadow-lg shadow-base-content/10",
-                onmounted: move |e| dropdown_content.set(Some(e.data())),
-                onfocusout: move |_| async move {
-                    if mouse_outside() {
-                        dropdown_open.set(false);
-                    } else {
-                        if let Some(dropdown_content) = dropdown_content() {
-                            let _ = dropdown_content.set_focus(true).await;
-                        }
-                    }
-                },
                 {children}
             }
         }
