@@ -344,7 +344,9 @@ pub fn NewHeritageConfigForm(
                 div { class: "card-body",
                     h3 { class: "card-title text-xl", "Minimum Maturity Delay" }
                     div { class: "text-sm mb-4",
-                        "The minimum time that must pass before any additional heirs can be added to this configuration."
+                        "The minimum time that heirs must wait after a new transaction is received
+                        before being able to inherit it, even if the Heritage Configuration is completely
+                        expired."
                     }
 
                     div { class: "flex flex-row items-center gap-2 my-2",
