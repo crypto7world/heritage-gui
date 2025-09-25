@@ -7,7 +7,7 @@ out_dir = "dist"
 [bundle]
 publisher = "Crypto7"
 identifier = "com.crypto7.heritage_wallet"
-copyright = "Copyright 2024 Crypto7"
+copyright = "Copyright 2025 Crypto7"
 category = "Finance"
 short_description = "A Bitcoin Taproot wallet managing on-chain inheritance"
 long_description = "Heritage Wallet is a Bitcoin Taproot wallet with built-in, on-chain protections against losing your coins and inheritance capabilities. It offers a trustless solution using a dead-man switch mechanism enforced by the Bitcoin blockchain."
