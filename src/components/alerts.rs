@@ -111,7 +111,7 @@ pub fn alert_info(message: impl Into<CCStr>) {
 #[component]
 pub fn AlertsContainer() -> Element {
     rsx! {
-        div { class: "fixed z-50 top-2 w-[90%] left-[5%] md:w-[60%] md:left-[20%] lg:w-1/2 lg:left-1/4",
+        div { class: "fixed z-50 top-14 w-[90%] left-[5%] md:w-[60%] md:left-[20%] lg:w-1/2 lg:left-1/4",
             for alert in ALERTS().iter() {
                 AlertDisplay { key: "{alert.uuid}", alert: alert.clone() }
             }
