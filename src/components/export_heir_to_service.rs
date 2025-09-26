@@ -353,7 +353,7 @@ pub fn ExportToServiceSectionForm(
                         textarea {
                             class: "textarea w-full",
                             placeholder: "Optional custom message for the heir",
-                            rows: "3",
+                            rows: "10",
                             value: main_message,
                             oninput: move |evt| main_message.set(evt.value()),
                         }

@@ -272,7 +272,7 @@ impl LoadedElement for UIServiceHeir {
                                 textarea {
                                     class: "textarea textarea-bordered font-mono text-xs w-full",
                                     readonly: true,
-                                    rows: 15,
+                                    rows: "10",
                                     value: "{message}",
                                 }
                             } else {
