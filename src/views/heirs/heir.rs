@@ -269,8 +269,11 @@ impl LoadedElement for UIServiceHeir {
                                 "Personal message from the wallet owner to the heir."
                             }
                             if let Some(ref message) = self.custom_message {
-                                div { class: "p-3 bg-base-200 rounded border-l-4 border-info",
-                                    {message}
+                                textarea {
+                                    class: "textarea textarea-bordered font-mono text-xs w-full",
+                                    readonly: true,
+                                    rows: 15,
+                                    value: "{message}",
                                 }
                             } else {
                                 "None"
