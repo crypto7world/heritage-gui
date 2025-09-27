@@ -263,9 +263,10 @@ impl LoadedElement for UIServiceHeir {
                             }
                         }
 
-                        fieldset { class: "fieldset",
-                            legend { class: "fieldset-legend", "Custom Message" }
-                            div { class: "fieldset-description",
+
+                        div { class: "card gap-2",
+                            div { class: "card-title", "Custom Message" }
+                            div { class: "card-subtitle",
                                 "Personal message from the wallet owner to the heir."
                             }
                             if let Some(ref message) = self.custom_message {
