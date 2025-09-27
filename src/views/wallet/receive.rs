@@ -3,7 +3,12 @@ use crate::prelude::*;
 use btc_heritage_wallet::{btc_heritage::heritage_wallet::WalletAddress, OnlineWallet, Wallet};
 
 use crate::{
-    components::{misc::UIBtcAddr, modal::InfoModal, qrcode::UIQRCode},
+    components::{
+        misc::UIBtcAddr,
+        modal::InfoModal,
+        qrcode::UIQRCode,
+        svg::{DrawSvg, SvgSize::Size5, Sync},
+    },
     utils::CheapClone,
 };
 
@@ -19,6 +24,26 @@ pub fn ReceiveButton() -> Element {
     let mut display_modal = use_signal(|| false);
     let mut receive_address = use_signal(|| None);
 
+    let generate_new_address = move || async move {
+        *in_operation.write() = true;
+        let op_result = wallet
+            .with_mut(async |wallet: &mut Wallet| wallet.get_address().await)
+            .await;
+        *in_operation.write() = false;
+
+        match op_result {
+            Ok(new_address) => {
+                log::info!("receive_click - Successfully created a new address for the wallet");
+                log::debug!("new_address={new_address}");
+                *receive_address.write() = Some(CheapClone::new(new_address));
+            }
+            Err(e) => {
+                log::error!("Failed to generate a new address: {e}");
+                alert_error(format!("Failed to generate a new address: {e}"));
+            }
+        };
+        *in_operation.write() = false;
+    };
     let receive_click = move |_| async move {
         *receive_address.write() = None;
         *display_modal.write() = true;
@@ -34,24 +59,7 @@ pub fn ReceiveButton() -> Element {
             log::debug!("ready_to_use_address={ready_to_use_address}");
             *receive_address.write() = Some(ready_to_use_address);
         } else {
-            *in_operation.write() = true;
-            let op_result = wallet
-                .with_mut(async |wallet: &mut Wallet| wallet.get_address().await)
-                .await;
-            *in_operation.write() = false;
-
-            match op_result {
-                Ok(new_address) => {
-                    log::info!("receive_click - Successfully created a new address for the wallet");
-                    log::debug!("new_address={new_address}");
-                    *receive_address.write() = Some(CheapClone::new(new_address));
-                }
-                Err(e) => {
-                    log::error!("Failed to generate a new address: {e}");
-                    alert_error(format!("Failed to generate a new address: {e}"));
-                }
-            };
-            *in_operation.write() = false;
+            generate_new_address().await;
         }
     };
 
@@ -79,6 +87,13 @@ pub fn ReceiveButton() -> Element {
                 LoadedComponent { input: address_qrcode.cloned().into() }
                 div { class: "text-xl font-mono",
                     LoadedComponent { input: address_string.cloned().into() }
+                }
+                button {
+                    class: "btn btn-secondary",
+                    onclick: move |_| generate_new_address(),
+                    disabled: in_operation() || ready_to_use_address.read().is_none(),
+                    DrawSvg::<Sync> { size: Size5 }
+                    "Generate another"
                 }
             }
         }
