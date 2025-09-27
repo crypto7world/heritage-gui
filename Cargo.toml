@@ -28,6 +28,7 @@ open = "5.2.0"
 uuid = { version = "1.16.0", features = ["v4"] }
 qrcode = { version = "0.14.1", default-features = false }
 regex = "1.10.5"
+arboard = "3.6.1"
 
 
 [features]

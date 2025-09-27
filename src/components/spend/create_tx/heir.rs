@@ -175,33 +175,11 @@ pub fn CreateHeirTx(heritage_id: CCStr, cant_sign: ReadOnlySignal<bool>) -> Elem
                 }
             }
             if let Some(psbt) = psbt_to_sign() {
-                div { class: "collapse collapse-arrow bg-base-200 text-base-content mt-4",
-                    input {
-                        r#type: "checkbox",
-                        checked: show_export(),
-                        onchange: move |evt| *show_export.write() = evt.checked(),
-                    }
-                    div { class: "collapse-title font-medium", "Export Unsigned Transaction" }
-                    div { class: "collapse-content",
-                        div { class: "flex flex-col gap-2",
-                            div { class: "text-sm text-(--color-base-content)/60",
-                                "Copy this encoded transaction to sign on another device or save for later:"
-                            }
-                            textarea {
-                                class: "textarea textarea-bordered font-mono text-xs w-full",
-                                rows: "8",
-                                readonly: true,
-                                value: psbt.0.as_ref(),
-                            }
-                            button {
-                                class: "btn btn-outline btn-sm",
-                                onclick: move |_| {
-                                    log::info!("Copy to clipboard functionality will be implemented");
-                                },
-                                "Copy to Clipboard"
-                            }
-                        }
-                    }
+                ExportEncodedTransaction {
+                    title: "Export Unsigned Transaction",
+                    description: "Copy this encoded transaction to sign on another device or save for later:",
+                    show_export,
+                    psbt: psbt.0.clone(),
                 }
             }
 

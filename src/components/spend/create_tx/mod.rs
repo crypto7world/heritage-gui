@@ -22,7 +22,7 @@ use crate::{
     utils::{denomination_for_amount, feerate_sat_per_vb, CCStr, CheapClone},
 };
 
-use super::{PsbtToSign, SignedPsbt, SpendStage};
+use super::{ExportEncodedTransaction, PsbtToSign, SignedPsbt, SpendStage};
 
 mod heir;
 mod owner;

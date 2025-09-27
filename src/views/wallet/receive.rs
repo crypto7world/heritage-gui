@@ -75,7 +75,7 @@ pub fn ReceiveButton() -> Element {
             }
         }
         InfoModal { is_open: display_modal, title: "Receive address",
-            div { class: "flex flex-col gap-2 items-center",
+            div { class: "flex flex-col gap-4 items-center",
                 LoadedComponent { input: address_qrcode.cloned().into() }
                 div { class: "text-xl font-mono",
                     LoadedComponent { input: address_string.cloned().into() }

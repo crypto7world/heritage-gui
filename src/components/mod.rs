@@ -2,6 +2,7 @@ pub mod alerts;
 pub mod app_config;
 pub mod badge;
 pub mod balance;
+pub mod copy;
 pub mod create_key_provider;
 pub mod delete;
 pub mod export_heir_to_service;

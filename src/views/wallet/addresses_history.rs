@@ -6,7 +6,8 @@ use btc_heritage_wallet::bitcoin::{Amount, OutPoint};
 
 use crate::{
     components::{
-        balance::UIBtcAmount, heritage_configuration::UIExpirationBadge, timestamp::UITimestamp,
+        balance::UIBtcAmount, heritage_configuration::UIExpirationBadge, misc::UIBtcAddr,
+        timestamp::UITimestamp,
     },
     utils::{CCStr, CheapClone},
 };
@@ -363,7 +364,7 @@ impl From<(&[TransactionStats], &[SimpleUtxo])> for UIAddressTransactionsHistory
 /// Complete expandable row combining summary and detailed views
 #[derive(Debug, Clone, PartialEq)]
 struct UIAddressesHistoryExpandableRow {
-    address: CCStr,
+    address: UIBtcAddr,
     address_origin: CCStr,
     expiration_badge: LResult<UIExpirationBadge>,
     balance: LResult<UIBtcAmount>,
@@ -433,7 +434,7 @@ impl LoadedElement for UIAddressesHistoryExpandableRow {
                                         LoadedComponent { input: m.map(self.address_origin) }
                                     }
                                     div {
-                                        LoadedComponent { input: m.map(self.address) }
+                                        LoadedComponent { input: m.map(self.address.0) }
                                     }
                                 }
                             }
@@ -453,7 +454,7 @@ impl LoadedElement for UIAddressesHistoryExpandableRow {
 
     fn place_holder() -> Self {
         Self {
-            address: CCStr::place_holder(),
+            address: UIBtcAddr::place_holder(),
             address_origin: CCStr::place_holder(),
             expiration_badge: None,
             balance: None,
@@ -477,7 +478,7 @@ impl FromRef<WalletAddressWithInfo> for UIAddressesHistoryExpandableRow {
             utxo_stats,
         } = wallet_address_with_info;
 
-        let address = CCStr::from(wallet_address.address().to_string());
+        let address = UIBtcAddr::from(wallet_address.address().to_string());
         let (fg, dp) = wallet_address.origin();
         let address_origin = CCStr::from(format!("[{fg}/{dp}]"));
 

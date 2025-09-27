@@ -1,4 +1,4 @@
-use crate::{components::quick_actions::UnlockLocalKey, prelude::*};
+use crate::prelude::*;
 
 mod broadcast_tx;
 mod create_tx;
@@ -13,6 +13,8 @@ use btc_heritage_wallet::{
 
 use crate::{
     components::{
+        copy::CopyTextarea,
+        quick_actions::UnlockLocalKey,
         svg::{Alert, ChevronRight, DrawSvg, One, SvgSize::Size8, Three, Two},
         transaction::UITxDetails,
     },
@@ -254,5 +256,30 @@ fn SendTabLabel(
 fn SendTabContent(children: Element) -> Element {
     rsx! {
         div { class: "tab-content p-6", {children} }
+    }
+}
+
+#[component]
+fn ExportEncodedTransaction(
+    title: &'static str,
+    description: &'static str,
+    show_export: Signal<bool>,
+    psbt: CCStr,
+) -> Element {
+    rsx! {
+        div { class: "collapse collapse-arrow bg-base-200 text-base-content mt-4",
+            input {
+                r#type: "checkbox",
+                checked: show_export(),
+                onchange: move |evt| *show_export.write() = evt.checked(),
+            }
+            div { class: "collapse-title font-medium", {title} }
+            div { class: "collapse-content",
+                div { class: "flex flex-col gap-2",
+                    div { class: "text-sm text-(--color-base-content)/60", {description} }
+                    CopyTextarea { value: psbt.clone(), rows: 8 }
+                }
+            }
+        }
     }
 }

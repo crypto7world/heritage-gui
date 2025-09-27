@@ -9,6 +9,7 @@ use btc_heritage_wallet::{
 
 use crate::{
     components::{
+        copy::CopyTextarea,
         modal::InfoModal,
         svg::{
             Alert, Cancel, DrawSvg, FileDownload, InfoCircleOutline, Seed, SvgSize::Size4, Unlock,
@@ -71,7 +72,7 @@ pub fn ShowKeyProviderMnemonic<KP: KeyProvider + 'static>(
             .and_then(|backup| backup.as_ref().ok())
             .map(|backup| {
                 (
-                    backup.mnemonic.words().collect::<Vec<&str>>().join(" "),
+                    CCStr::from(backup.mnemonic.words().collect::<Vec<&str>>().join(" ")),
                     backup.fingerprint,
                     backup.with_password,
                 )
@@ -173,12 +174,12 @@ pub fn ShowKeyProviderMnemonic<KP: KeyProvider + 'static>(
                             step: OnboardingStep::HoverHeirMnemonic,
                             progress: MaybeHighlightProgressType::Hover(1),
                             context_filter: consume_onboarding_context(),
-                            div {
-                                textarea {
-                                    class: "textarea textarea-bordered font-mono text-sm w-full",
-                                    class: if !disclaimer_accepted() { "blur-xs" },
-                                    readonly: true,
-                                    value: if disclaimer_accepted() { mnemonic_words } else { "this is not the real mnemonic phrase but just place holder data" },
+                            div { class: if !disclaimer_accepted() { "blur-xs" },
+                                CopyTextarea {
+                                    value: if disclaimer_accepted() { mnemonic_words.clone() } else { "this is not the real mnemonic phrase but just place holder data".into() },
+                                    rows: 3,
+                                    text_size: "text-sm",
+                                    copy_btn_disabled: !disclaimer_accepted(),
                                 }
                             }
                         }
@@ -208,12 +209,10 @@ pub fn BackupOnlineWallet(wallet_name: CCStr) -> Element {
 
     let backup_data = use_memo(move || {
         descriptor_backup
-            .read()
-            .as_ref()
-            .and_then(|backup| backup.as_ref().ok())
-            .map(|backup| {
-                serde_json::to_string_pretty(backup)
-                    .unwrap_or_else(|_| "Error serializing backup data".to_string())
+            .lrmap_ok(|backup| {
+                CCStr::from(
+                    serde_json::to_string_pretty(backup).expect("HeritageBackup is serializable"),
+                )
             })
             .unwrap_or_default()
     });
@@ -244,7 +243,7 @@ pub fn BackupOnlineWallet(wallet_name: CCStr) -> Element {
             let file_path = backup_path.read();
             let data = backup_data();
 
-            match fs::write(file_path.as_str(), data) {
+            match fs::write(file_path.as_str(), data.as_ref()) {
                 Ok(()) => {
                     log::info!("Backup file written successfully to: {}", file_path);
                     alert_info(format!("Backup saved to: {}", file_path));
@@ -291,12 +290,7 @@ pub fn BackupOnlineWallet(wallet_name: CCStr) -> Element {
 
                 div { class: "flex flex-col gap-2",
                     div { class: "font-semibold", "Backup Data:" }
-                    textarea {
-                        class: "textarea textarea-bordered font-mono text-xs w-full",
-                        rows: "12",
-                        readonly: true,
-                        value: backup_data(),
-                    }
+                    CopyTextarea { value: backup_data(), rows: 12 }
                 }
 
                 if CAN_DOWNLOAD {

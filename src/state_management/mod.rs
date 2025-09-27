@@ -1,4 +1,5 @@
 mod blockchain;
+mod clipboard;
 mod database;
 mod event_bus;
 mod helpers;
@@ -15,6 +16,7 @@ pub fn use_init_services() {
     let _ = blockchain::use_blockchain_provider_service(event_bus_service, database_service);
     let _ = onboarding::use_onboarding_service(event_bus_service, database_service);
     let _ = theme::use_theme_service(event_bus_service, database_service);
+    let _ = clipboard::use_clipboard_service();
     ledger::use_ledger_status_service();
     log::debug!("init_services - finished");
 }

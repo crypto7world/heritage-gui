@@ -10,6 +10,7 @@ use btc_heritage_wallet::{
 use crate::{
     components::{
         badge::UIHeirBadges,
+        copy::CopyTextarea,
         onboarding::MaybeOnPathHighlight,
         quick_actions::{ShowKeyProviderMnemonic, ShowKeyProviderMnemonicFlavor},
         svg::{CheckCircle, Close, Cog, DrawSvg, SvgSize::Full, SvgSize::Size5},
@@ -199,13 +200,15 @@ fn HeirConfigComponent() -> Element {
                         }
                     }
 
-                    fieldset { class: "fieldset",
-                        legend { class: "fieldset-legend text-lg", "Heir Configuration Value" }
-                        div { class: "fieldset-description",
+                    div { class: "card gap-2",
+                        div { class: "card-title text-lg", "Heir Configuration Value" }
+                        div { class: "card-subtitle",
                             "This value can be copied for use in an Heritage Wallet Configuration."
                         }
-                        div { class: "input input-lg w-full font-mono focus:outline-none overflow-x-scroll",
-                            "{heir_config_value()}"
+                        CopyTextarea {
+                            value: heir_config_value(),
+                            rows: 2,
+                            text_size: "text-lg",
                         }
                     }
                 }

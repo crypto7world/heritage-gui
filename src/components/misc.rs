@@ -1,7 +1,10 @@
 use crate::prelude::*;
 
 use crate::{
-    components::svg::{ArrowLeft, DrawSvg, SvgSize::Custom},
+    components::{
+        copy::CopyToClipboardButtonIcon,
+        svg::{ArrowLeft, DrawSvg, SvgSize::Custom},
+    },
     utils::CCStr,
 };
 
@@ -86,7 +89,7 @@ pub fn Teleport(children: Element) -> Element {
 macro_rules! arcstr_loaded_elem {
     ($name:ident, $ph:literal) => {
         #[derive(Debug, Clone, PartialEq)]
-        pub struct $name(CCStr);
+        pub struct $name(pub CCStr);
         impl<T> From<T> for $name
         where
             CCStr: From<T>,
@@ -100,7 +103,14 @@ macro_rules! arcstr_loaded_elem {
             #[inline(always)]
             fn element<M: LoadedComponentInputMapper>(self, _m: M) -> Element {
                 rsx! {
-                    {self.0}
+                    div{
+                        class:"flex flex-row gap-2",
+                        {self.0.clone()}
+                        div{
+                            class:"z-20",
+                            CopyToClipboardButtonIcon {value: self.0}
+                        }
+                    }
                 }
             }
 

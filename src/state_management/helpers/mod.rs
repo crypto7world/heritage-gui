@@ -1,4 +1,5 @@
 mod blockchain;
+mod clipboard;
 mod config;
 mod database;
 mod heir;
@@ -15,7 +16,10 @@ use btc_heritage_wallet::{
 };
 use tokio::sync::oneshot;
 
-use crate::utils::{log_error, CCStr, CheapClone};
+use crate::{
+    state_management::clipboard::ClipboardCommand,
+    utils::{log_error, CCStr, CheapClone},
+};
 
 use super::{
     blockchain::BlockchainProviderCommand,
@@ -25,6 +29,7 @@ use super::{
 };
 
 pub use blockchain::*;
+pub use clipboard::*;
 pub use config::*;
 pub use database::*;
 pub use heir::*;
@@ -42,5 +47,9 @@ pub fn use_database_service() -> Coroutine<DatabaseCommand> {
 }
 
 pub fn use_service_client_service() -> Coroutine<ServiceClientCommand> {
+    use_coroutine_handle()
+}
+
+pub fn use_clipboard_service() -> Coroutine<ClipboardCommand> {
     use_coroutine_handle()
 }
