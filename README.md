@@ -101,6 +101,10 @@ Also, if you are dead, your heirs should be notified and helped to retrieve the 
 
 Of course, you can take steps to do all that on your own; the service is simply here to ease the burden.
 
+### Where can I learn more?
+
+We recommend reading the [Heritage Wallet app launch blog post][heritage-blog-wallet-launch], as well as [Why the Heritage Service?][heritage-blog-why-heritage]. Both are available in English and French.
+
 <p align="right">(<a href="#top">↑ back to top</a>)</p>
 
 ## Known Issues
@@ -108,7 +112,8 @@ Of course, you can take steps to do all that on your own; the service is simply 
 As this is the first iteration of Heritage GUI, you can expect some cosmetic issues:
 
 - **Missing icon for Windows apps**: The Windows application currently lacks a proper icon. This is a cosmetic issue that doesn't affect functionality.
-- **Untested macOS bundle**: The macOS bundle has not been thoroughly tested yet. If you're a macOS user, your feedback is very welcome.
+- **No macOS bundle**: We could not get the macOS bundling to work yet because we don't have a signing certificate. If you're a macOS user, you will have to compile the project yourself for now.
+- **No code-signing certificates**: They are expensive, and we don't have them yet. This prevents us from creating a working macOS bundle, and the Windows Installer will be deemed "dangerous" by Windows (sometimes it outright qualifies the binaries as harmful). On Windows, you can ignore the warnings or compile the project yourself if you prefer.
 
 Since we're just releasing the first iteration, please don't hesitate to [open issues][issues-url] for any problems you encounter. We are keen on improving the software and value community feedback.
 
@@ -411,6 +416,8 @@ Project Link: [https://github.com/crypto7world/heritage-gui][repo-url]
 
 <!-- MARKDOWN LINKS & IMAGES -->
 [heritage-wallet-service]: https://btc-heritage.com
+[heritage-blog-wallet-launch]: https://btc-heritage.com/docs/heritage-wallet-app-launch
+[heritage-blog-why-heritage]: https://btc-heritage.com/docs/why-heritage
 [repo-url]: https://github.com/crypto7world/heritage-gui
 [contributors-shield]: https://img.shields.io/github/contributors/crypto7world/heritage-gui.svg?style=for-the-badge
 [contributors-url]: https://github.com/crypto7world/heritage-gui/graphs/contributors
