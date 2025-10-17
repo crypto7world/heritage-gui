@@ -4,7 +4,7 @@
 
 <!-- PROJECT SHIELDS -->
 <!--
-*** I'm using markdown "reference style" links for readability.
+*** We're using markdown "reference style" links for readability.
 *** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
 *** See the bottom of this document for the declaration of the reference variables
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
@@ -26,9 +26,9 @@
   <h3 align="center">Heritage GUI</h3>
 
   <p align="center">
-    The Heritage wallet GUI, a Bitcoin Taproot wallet managing on-chain inheritance of bitcoins.
+    The Heritage wallet GUI, a Bitcoin Taproot wallet managing on-chain backup & inheritance of bitcoins.
     <br />
-    <a href="https://btcherit.com"><strong>Explore the Heritage wallet service »</strong></a>
+    <a href="https://btc-heritage.com"><strong>Explore the Heritage wallet service »</strong></a>
     <br />
     <a href="https://github.com/crypto7world/heritage-gui/issues">Report Bug</a> · <a href="https://github.com/crypto7world/heritage-gui/issues">Request Feature</a>
   </p>
@@ -68,7 +68,7 @@
 
 ## About The Project
 
-The Heritage GUI provides a graphical user interface to manage Bitcoin wallets with built-in inheritance capabilities. Built with [Dioxus](https://dioxuslabs.com), it offers an intuitive desktop application for managing your **Heritage wallet**: a Taproot Bitcoin wallet developed in _Rust_ with built-in, on-chain protections against losing your coins and inheritance.
+The Heritage GUI provides a graphical user interface to manage Bitcoin wallets with built-in backup & inheritance capabilities. Built with [Dioxus](https://dioxuslabs.com), it offers an intuitive desktop application for managing your **Heritage wallet**: a Taproot Bitcoin wallet developed in _Rust_ with built-in, on-chain protection against losing your coins and on-chain inheritance schedule.
 
 The basic principle is a dead-man switch: should you become unable to spend your coins for whatever reasons, alternative spending paths (i.e. TapScripts) will eventually open, allowing other private keys to spend your coins, following a schedule you configure **enforced by the Bitcoin blockchain**. On the other hand, if you are able to spend your coins you can regularly "reset" this schedule simply by moving your coins to a new address of your wallet.
 
@@ -81,11 +81,11 @@ In both cases, using the **Heritage wallet**, your coins will be recoverable aft
 
 Usually, protecting yourself against those situations requires one or more trusted third-party with whom you share control of your coins to various degrees. The **Heritage wallet** offers a solution without such compromise: you retain exclusive control of your coins.
 
-The Heritage GUI can interact with the [btcherit.com][heritage-wallet-service] service or manage everything locally. On the private keys front, it can either manage them locally, or with the help of a [Ledger](https://www.ledger.com/) hardware-wallet device.
+The Heritage GUI can interact with the [btc-heritage.com][heritage-wallet-service] service or manage everything locally on your computer. On the private keys front, it can either manage them locally on your device, or with the help of a [hardware-wallet](#hardware-wallet-support).
 
 ### I don't want to depend on an online service at all
 
-And I understand: the Heritage GUI is able to work independently of the service! Provide it a custom Bitcoin Core or Electrum node for synchronization, and manage your Heritage wallet entirely on your own!
+And we understand: the Heritage GUI is able to work independently of the service! Provide it a custom Bitcoin Core or Electrum node for synchronization, and manage your Heritage wallet entirely on your own!
 
 Beware though that you _SHOULD_ make sure you understand what are the caveats of this mode of operation, most importantly that you _HAVE TO_ backup your descriptors: it is even more important than to backup your seed.
 
@@ -110,7 +110,7 @@ As this is the first iteration of Heritage GUI, you can expect some cosmetic iss
 - **Missing icon for Windows apps**: The Windows application currently lacks a proper icon. This is a cosmetic issue that doesn't affect functionality.
 - **Untested macOS bundle**: The macOS bundle has not been thoroughly tested yet. If you're a macOS user, your feedback is very welcome.
 
-Since we're just releasing the first iteration, please don't hesitate to [open issues][issues-url] for any problems you encounter. I am keen on improving the software and values community feedback.
+Since we're just releasing the first iteration, please don't hesitate to [open issues][issues-url] for any problems you encounter. We are keen on improving the software and value community feedback.
 
 <p align="right">(<a href="#top">↑ back to top</a>)</p>
 
@@ -271,7 +271,7 @@ Skip the guided setup if you prefer to configure everything manually (and you ca
 Next, you'll choose how to access the Bitcoin blockchain:
 
 **Using the Heritage Service**
-The recommended approach for most users. This leverages managed infrastructure at [btcherit.com][heritage-wallet-service], providing enhanced reliability and automated features like inheritance notifications and descriptor backup.
+The recommended approach for most users. This leverages managed infrastructure at [btc-heritage.com][heritage-wallet-service], providing enhanced reliability and automated features like inheritance notifications and descriptors backup.
 
 **Using Your Own Node**
 For users who prefer complete sovereignty, you can connect to your own Bitcoin Core or Electrum server. This option requires additional technical setup but provides maximum privacy and independence.
@@ -410,7 +410,7 @@ Project Link: [https://github.com/crypto7world/heritage-gui][repo-url]
 <p align="right">(<a href="#top">↑ back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
-[heritage-wallet-service]: https://btcherit.com
+[heritage-wallet-service]: https://btc-heritage.com
 [repo-url]: https://github.com/crypto7world/heritage-gui
 [contributors-shield]: https://img.shields.io/github/contributors/crypto7world/heritage-gui.svg?style=for-the-badge
 [contributors-url]: https://github.com/crypto7world/heritage-gui/graphs/contributors

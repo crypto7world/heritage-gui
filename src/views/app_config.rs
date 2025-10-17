@@ -311,7 +311,7 @@ fn HeritageServiceConfigSection() -> Element {
                                 value: service_api_url(),
                                 disabled: *updating.read(),
                                 oninput: move |event| *service_api_url.write() = event.value(),
-                                placeholder: "https://api.btcherit.com/v1",
+                                placeholder: "https://api.btc-heritage.com/v1",
                             }
                             if let Some(config) = resource_service_client_config.read().as_ref() {
                                 div { class: "label", "Current: {config.service_api_url}" }

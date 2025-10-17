@@ -34,7 +34,7 @@ pub fn MainLayout() -> Element {
                     .next()
             })
             .flatten()
-            .unwrap_or("btcherit.com");
+            .unwrap_or("btc-heritage.com");
         format!("https://{host}/")
     });
 
