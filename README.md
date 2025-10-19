@@ -341,27 +341,7 @@ Also consult the [open issues][issues-url] for other proposed features and known
 
 ## Hardware Wallet Support
 
-Heritage GUI supports hardware wallets for secure private key management. Below is the current compatibility status:
-
-### Supported Devices
-
-| Device | Status | Notes |
-|--------|--------|--------|
-| **Ledger** | ✅ Supported | Full support for Taproot wallets using TapScript |
-
-### Unsupported Devices
-
-| Device | Status | Reason |
-|--------|--------|--------|
-| **Trezor** | ❌ Not Supported | Does not support Taproot wallets using TapScript |
-
-### Request Support for Your Device
-
-Don't see your hardware wallet listed? We welcome requests for additional hardware wallet support!
-
-**[Request Hardware Wallet Support](https://github.com/crypto7world/heritage-gui/issues/new?assignees=&labels=enhancement%2Chardware-wallet&projects=&template=hardware-wallet-support.md&title=%5BHardware+Wallet%5D+Support+for+%5BDEVICE+NAME%5D)**
-
-Please include a link to the official product page and any technical specifications that you know off about Bitcoin/Taproot support when submitting your request.
+Heritage GUI supports hardware wallets for secure private key management. See [Hardware Wallet Support](https://github.com/crypto7world/btc-heritage?tab=readme-ov-file#hardware-wallet-support).
 
 <p align="right">(<a href="#top">↑ back to top</a>)</p>
 
