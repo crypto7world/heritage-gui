@@ -31,6 +31,15 @@ use super::{
     utils::LoadableMapper,
 };
 
+fn subscribe_service_status_if_service_wallet(wallet: &AsyncSignal<Wallet>) {
+    if let Some(ref wallet) = *wallet.read() {
+        if matches!(wallet.online_wallet(), AnyOnlineWallet::Service(_)) {
+            // Read the SERVICE_STATUS so that we refresh when the SERVICE_STATUS is refreshed
+            let _ = *state_management::SERVICE_STATUS.read();
+        }
+    }
+}
+
 pub fn use_resource_wallet_names() -> Resource<Vec<CCStr>> {
     let database_service = state_management::use_database_service();
     use_resource(move || async move {

@@ -17,6 +17,8 @@ pub fn use_resource_wallet_status(wallet: AsyncSignal<Wallet>) -> FResource<Wall
     use_resource(move || async move {
         log::debug!("use_resource_wallet_status - start");
 
+        super::subscribe_service_status_if_service_wallet(&wallet);
+
         let wallet_status = wallet
             .with(async |wallet| {
                 wallet.get_wallet_status().await.map_err(|e| {

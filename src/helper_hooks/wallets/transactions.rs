@@ -17,6 +17,8 @@ pub fn use_resource_wallet_transactions(
     use_resource(move || async move {
         log::debug!("use_resource_wallet_transactions - start");
 
+        super::subscribe_service_status_if_service_wallet(&wallet);
+
         let wallet_txs = wallet
             .with(async |wallet| {
                 let wallet_name = wallet.name().to_owned();
