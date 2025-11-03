@@ -1,6 +1,6 @@
 [package]
 name = "heritage-gui"
-version = "0.1.4-beta"
+version = "0.1.5-beta"
 description = "The Heritage wallet GUI, a Bitcoin Taproot wallet managing on-chain inheritance of bitcoins"
 repository = "https://github.com/crypto7world/heritage-gui.git"
 rust-version = "1.85"
