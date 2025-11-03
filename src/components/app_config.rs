@@ -217,6 +217,8 @@ pub fn AppConfigDropDown(head: Element, children: Element) -> Element {
 pub fn ServiceConnectButton() -> Element {
     // Heritage Service Status
     let service_client_service = state_management::use_service_client_service();
+    let clipboard_service = state_management::use_clipboard_service();
+
     let mut dar_content: Signal<Option<(String, String)>> = use_signal(|| None);
     let mut connecting = use_signal(|| false);
     use_effect(move || *connecting.write() = dar_content.read().is_some());
@@ -296,14 +298,28 @@ pub fn ServiceConnectButton() -> Element {
                         div { class: "my-4 h-px border-t border-solid border-gray-500" }
 
                         p { class: "pt-4", "Please browse to the Heritage service website:" }
-                        div { class: "text-xl text-secondary font-bold select-all",
+                        div {
+                            class: "text-xl text-secondary font-bold select-all",
+                            onclick: move |_| {
+                                state_management::copy_to_clipboard(
+                                    clipboard_service,
+                                    dar_content.read().as_ref().map(|v| v.0.as_str()).unwrap_or_default(),
+                                );
+                            },
                             {dar_content.read().as_ref().map(|v| v.0.as_str()).unwrap_or_default()}
                         }
                         p {
                             "in order to approve the connection (should have been open in your browser)"
                         }
                         p { class: "py-4", "Verify that the code displayed is:" }
-                        div { class: "p-2 mb-4 size-fit mx-auto text-6xl text-primary font-black rounded border-solid border-2 border-base-content",
+                        div {
+                            class: "p-2 mb-4 size-fit mx-auto text-6xl text-primary font-black rounded border-solid border-2 border-base-content",
+                            onclick: move |_| {
+                                state_management::copy_to_clipboard(
+                                    clipboard_service,
+                                    dar_content.read().as_ref().map(|v| v.1.as_str()).unwrap_or_default(),
+                                );
+                            },
                             {dar_content.read().as_ref().map(|v| v.1.as_str()).unwrap_or_default()}
                         }
                     }
