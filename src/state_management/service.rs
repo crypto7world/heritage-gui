@@ -96,7 +96,10 @@ pub enum ServiceClientCommand {
         result:
             oneshot::Sender<Result<(), btc_heritage_wallet::heritage_service_api_client::Error>>,
     },
-    Disconnect,
+    Disconnect {
+        result:
+            oneshot::Sender<Result<(), btc_heritage_wallet::heritage_service_api_client::Error>>,
+    },
     GetServiceClient {
         result: oneshot::Sender<HeritageServiceClient>,
     },
@@ -113,9 +116,7 @@ pub enum ServiceClientCommand {
         result: oneshot::Sender<HeritageServiceConfig>,
     },
     /// Update configuration
-    UpdateConfig {
-        config: HeritageServiceConfig,
-    },
+    UpdateConfig { config: HeritageServiceConfig },
     /// Internal trigger a refresh from the DB
     RefreshConfig,
 }
@@ -126,7 +127,10 @@ impl core::fmt::Debug for ServiceClientCommand {
                 .debug_struct("Connect")
                 .field("result", result)
                 .finish_non_exhaustive(),
-            Self::Disconnect => f.debug_struct("Disconnect").finish_non_exhaustive(),
+            Self::Disconnect { result } => f
+                .debug_struct("Disconnect")
+                .field("result", result)
+                .finish(),
             Self::GetServiceClient { result } => f
                 .debug_struct("GetServiceClient")
                 .field("result", result)
@@ -189,20 +193,25 @@ pub(super) fn use_service_client_service(
                             }
                         }
                     }
-                    ServiceClientCommand::Disconnect => {
-                        service_client.logout().await;
-                        update_service_status(service_client.clone());
-                        let (database_result, rx) = oneshot::channel();
-                        database_service.send(DatabaseCommand::ClearTokens {
-                            result: database_result,
-                        });
-                        match rx.await.expect("database_service error") {
-                            Ok(_) => (),
-                            Err(e) => {
-                                log::error!("Could not clear Heritage Service client Tokens in the database: {e}");
-                                ()
+                    ServiceClientCommand::Disconnect { result } => {
+                        match service_client.logout().await {
+                            Ok(()) => {
+                                update_service_status(service_client.clone());
+                                let (database_result, rx) = oneshot::channel();
+                                database_service.send(DatabaseCommand::ClearTokens {
+                                    result: database_result,
+                                });
+                                match rx.await.expect("database_service error") {
+                                    Ok(_) => result.send(Ok(())).expect("chanel failure"),
+                                    Err(e) => {
+                                        result.send(Err(e)).expect("chanel failure");
+                                    }
+                                };
                             }
-                        };
+                            Err(e) => {
+                                result.send(Err(e)).expect("chanel failure");
+                            }
+                        }
                     }
                     ServiceClientCommand::GetServiceClient { result } => {
                         result.send(service_client.clone()).expect("chanel failure");
@@ -249,50 +258,35 @@ fn update_service_status(client: HeritageServiceClient) {
     spawn(async move {
         log::debug!("update_service_status - start");
         *SERVICE_STATUS.write() = None;
-        let service_status = if client.has_tokens().await {
-            let user_id_task = async {
-                client
-                    .get_tokens()
-                    .read()
-                    .await
-                    .as_ref()
-                    .map(|t| {
-                        serde_json::from_value(t.id_token().as_json())
-                            .expect("id_token should always have the correct fields")
-                    })
-                    .expect("just verified we have tokens")
-            };
-
-            let (user_id, serviceable_wallets_res, serviceable_heritages_res) =
-                tokio::join!(user_id_task, client.list_wallets(), client.list_heritages());
-
-            let serviceable_wallets = serviceable_wallets_res
-                .map(|wallet_list| {
-                    wallet_list
-                        .into_iter()
-                        .map(|wallet_meta| (wallet_meta.id, wallet_meta.fingerprint))
-                        .collect()
-                })
-                .map_err(log_error)
-                .unwrap_or_default();
-
-            let serviceable_heritages = serviceable_heritages_res
-                .map(|heritage_list| {
-                    heritage_list
-                        .into_iter()
-                        .filter_map(|heritage| heritage.heir_config.map(|hc| hc.fingerprint()))
-                        .collect()
-                })
-                .map_err(log_error)
-                .unwrap_or_default();
-
-            ServiceStatus::Connected(ConnectedServiceStatus {
-                user_id,
-                serviceable_wallets,
-                serviceable_heritages,
+        let user_id_task = async {
+            client.get_tokens().read().await.as_ref().map(|t| {
+                serde_json::from_value(t.id_token().as_json())
+                    .expect("id_token should always have the correct fields")
             })
-        } else {
-            ServiceStatus::Disconnected
+        };
+
+        let (user_id, serviceable_wallets_res, serviceable_heritages_res) =
+            tokio::join!(user_id_task, client.list_wallets(), client.list_heritages());
+
+        let serviceable_wallets_res = serviceable_wallets_res.map_err(log_error);
+        let serviceable_heritages_res = serviceable_heritages_res.map_err(log_error);
+        let service_status = match (user_id, serviceable_wallets_res, serviceable_heritages_res) {
+            (Some(user_id), Ok(serviceable_wallets), Ok(serviceable_heritages)) => {
+                let serviceable_wallets = serviceable_wallets
+                    .into_iter()
+                    .map(|wallet_meta| (wallet_meta.id, wallet_meta.fingerprint))
+                    .collect();
+                let serviceable_heritages = serviceable_heritages
+                    .into_iter()
+                    .filter_map(|heritage| heritage.heir_config.map(|hc| hc.fingerprint()))
+                    .collect();
+                ServiceStatus::Connected(ConnectedServiceStatus {
+                    user_id,
+                    serviceable_wallets,
+                    serviceable_heritages,
+                })
+            }
+            _ => ServiceStatus::Disconnected,
         };
         log::debug!("update_service_status - set to {service_status:?}");
         *SERVICE_STATUS.write() = Some(service_status);

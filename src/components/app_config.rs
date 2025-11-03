@@ -226,7 +226,13 @@ pub fn ServiceConnectButton() -> Element {
         if let Some(ref service_status) = *read_guard {
             match service_status {
                 ServiceStatus::Connected(_) => {
-                    state_management::disconnect(service_client_service).await
+                    // /!\ IMPORTANT
+                    // Before calling the connection process, drop the ReadGuard on SERVICE_STATUS
+                    // The crate::state_management::disconnect(...) will try to Write in SERVICE_STATUS at some point
+                    drop(read_guard);
+                    if let Err(e) = state_management::disconnect(service_client_service).await {
+                        alert_error(e);
+                    }
                 }
                 ServiceStatus::Disconnected => {
                     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -248,12 +254,15 @@ pub fn ServiceConnectButton() -> Element {
                     // The crate::state_management::connect(...) will try to Write in SERVICE_STATUS at some point
                     drop(read_guard);
 
-                    state_management::connect(service_client_service, move |dar| async move {
-                        tx.send(dar).expect("chanel tx closed");
-                        Ok(())
-                    })
-                    .await
-                    .ok();
+                    if let Err(e) =
+                        state_management::connect(service_client_service, move |dar| async move {
+                            tx.send(dar).expect("chanel tx closed");
+                            Ok(())
+                        })
+                        .await
+                    {
+                        alert_error(e);
+                    }
                     *dar_content.write() = None;
                 }
             }

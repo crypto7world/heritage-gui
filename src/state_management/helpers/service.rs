@@ -29,10 +29,19 @@ where
     result
 }
 
-pub async fn disconnect(service_client_service: Coroutine<ServiceClientCommand>) {
+pub async fn disconnect(
+    service_client_service: Coroutine<ServiceClientCommand>,
+) -> Result<(), String> {
     log::debug!("disconnect - start");
-    service_client_service.send(ServiceClientCommand::Disconnect);
+    let (result, waiter) = oneshot::channel();
+    service_client_service.send(ServiceClientCommand::Disconnect { result });
+    let result = waiter
+        .await
+        .expect("service_client_service error")
+        .map_err(log_error);
+
     log::debug!("disconnect - finished");
+    result
 }
 
 pub async fn heritage_service_client(
