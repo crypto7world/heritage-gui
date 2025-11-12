@@ -494,8 +494,8 @@ dependencies = [
 
 [[package]]
 name = "btc-heritage"
-version = "0.30.0"
-source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.30.0#449fa758a7334ab1e17f6d7cb4c72d86e48b24a5"
+version = "0.31.0"
+source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.31.0#7c03a488961ee05bed9032e0dd8042a8c3fad3e2"
 dependencies = [
  "bdk",
  "log",
@@ -507,8 +507,8 @@ dependencies = [
 
 [[package]]
 name = "btc-heritage-wallet"
-version = "0.30.0"
-source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.30.0#449fa758a7334ab1e17f6d7cb4c72d86e48b24a5"
+version = "0.31.0"
+source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.31.0#7c03a488961ee05bed9032e0dd8042a8c3fad3e2"
 dependencies = [
  "bip39",
  "bitcoin 0.31.2",
@@ -2423,8 +2423,8 @@ dependencies = [
 
 [[package]]
 name = "heritage-service-api-client"
-version = "0.30.0"
-source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.30.0#449fa758a7334ab1e17f6d7cb4c72d86e48b24a5"
+version = "0.31.0"
+source = "git+https://github.com/crypto7world/btc-heritage.git?tag=v0.31.0#7c03a488961ee05bed9032e0dd8042a8c3fad3e2"
 dependencies = [
  "btc-heritage",
  "log",
